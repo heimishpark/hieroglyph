@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hieroglyph Font Designer</title>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:var(--font-sans);}
+    .app{display:flex;flex-direction:column;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;min-height:680px;}
+    .topbar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);flex-wrap:wrap;}
+    .topbar-title{font-size:13px;font-weight:500;color:var(--color-text-primary);flex:1;min-width:120px;}
+    .btn{padding:6px 13px;font-size:12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary);cursor:pointer;}
+    .btn:hover{background:var(--color-background-secondary);}
+    .btn-primary{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary);}
+    .btn-primary:hover{opacity:0.82;background:var(--color-text-primary);}
+    .main{
+  display:grid;
+  grid-template-columns: 1fr 420px;
+  flex:1;
+  min-height:0;
+}
+    .left{display:flex;flex-direction:column;overflow:hidden;}
+    .tabs{display:flex;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);}
+    .tab{padding:8px 16px;font-size:12px;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;}
+    .tab.active{color:var(--color-text-primary);border-bottom-color:var(--color-text-primary);font-weight:500;}
+    .tab-content{display:none;flex:1;overflow-y:auto;flex-direction:column;}
+    .tab-content.active{display:flex;}
+    .lbl{font-size:11px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.07em;font-weight:500;}
+
+    /* font grid */
+    .font-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;padding:12px;}
+    .font-cell{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;background:var(--color-background-primary);}
+    .font-cell:hover{border-color:var(--color-border-primary);}
+    .font-cell.selected{border-color:var(--color-text-primary);border-width:1px;}
+    .font-cell.has-glyph{background:var(--color-background-secondary);}
+    .cell-letter{font-size:10px;font-weight:500;color:var(--color-text-secondary);}
+    .cell-preview{width:52px;height:52px;display:flex;align-items:center;justify-content:center;position:relative;overflow:visible;padding:2px;}
+
+    /* editor */
+    .editor{padding:14px;display:flex;flex-direction:column;gap:10px;border-top:0.5px solid var(--color-border-tertiary);}
+    .editor-header{display:flex;align-items:center;gap:10px;}
+    .editor-letter-box{width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:500;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);}
+    .method-tabs{display:flex;gap:5px;}
+    .mtab{padding:5px 10px;font-size:11px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-secondary);cursor:pointer;}
+    .mtab.active{border-color:var(--color-text-primary);color:var(--color-text-primary);font-weight:500;}
+
+    /* composition area */
+    .compose-area{display:flex;flex-direction:column;gap:8px;}
+    .compose-slots{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-height:56px;padding:8px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);}
+    .slot{width:48px;height:48px;border:0.5px dashed var(--color-border-secondary);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:26px;position:relative;background:var(--color-background-primary);}
+    .slot .rm{position:absolute;top:-6px;right:-6px;width:14px;height:14px;background:var(--color-text-secondary);color:var(--color-background-primary);border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;}
+    .slot-add{width:48px;height:48px;border:0.5px dashed var(--color-border-tertiary);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);font-size:20px;cursor:default;}
+    .compose-preview{display:flex;flex-direction:column;gap:4px;}
+    .preview-box{width:84px;height:84px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;background:var(--color-background-primary);overflow:visible;padding:4px;}
+
+    /* gardiner picker */
+    .g-search{width:100%;padding:6px 10px;font-size:12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);}
+    .g-search:focus{outline:none;border-color:var(--color-border-primary);}
+    .gardiner-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-height:180px;overflow-y:auto;}
+    .g-item{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px;border:0.5px solid transparent;border-radius:6px;cursor:pointer;}
+    .g-item:hover{border-color:var(--color-border-secondary);background:var(--color-background-secondary);}
+    .g-item.in-slot{border-color:var(--color-text-primary);background:var(--color-background-secondary);}
+    .g-sym{font-size:22px;line-height:1;}
+    .g-code{font-size:8px;color:var(--color-text-secondary);font-family:var(--font-mono);}
+
+    /* draw */
+    #drawCanvas{border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);cursor:crosshair;display:block;touch-action:none;background:#fff;}
+    .mode-switch{display:flex;align-items:center;gap:8px;padding:4px 10px;border:0.5px solid var(--color-border-secondary);border-radius:999px;background:var(--color-background-primary);}
+    .switch-label{font-size:11px;color:var(--color-text-secondary);}
+    .switch{position:relative;width:42px;height:24px;border-radius:999px;background:#d8d8d8;cursor:pointer;transition:background 0.2s;border:none;outline:none;}
+    .switch::after{content:"";position:absolute;top:4px;left:4px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.16);}
+    .switch.on{background:#4f8cff;}
+    .switch.on::after{transform:translateX(18px);}
+    .mode-status{font-size:11px;color:var(--color-text-secondary);}
+    .draw-panel{display:flex;flex-direction:column;gap:10px;}
+    .draw-stage{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);padding:12px;display:flex;flex-direction:column;gap:10px;}
+    .draw-preview-row{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;}
+    .draw-large-wrap{flex:1;min-width:260px;}
+    .draw-large-box{width:100%;min-height:280px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:#f3f3f3;display:flex;align-items:center;justify-content:center;padding:10px;}
+    .draw-small-preview{width:72px;display:flex;flex-direction:column;gap:6px;align-items:center;}
+    .small-preview-box{width:72px;height:72px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+
+    .default-sign-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+    .default-sign-card{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:0.5px solid var(--color-border-tertiary);border-radius:12px;background:var(--color-background-primary);}
+    .default-sign-card.active{border-color:var(--color-text-primary);background:var(--color-background-secondary);}
+    .default-sign-symbol{width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .default-sign-meta{display:flex;flex-direction:column;gap:2px;min-width:0;}
+    .default-sign-head{font-size:12px;color:var(--color-text-primary);font-weight:500;line-height:1.25;}
+    .default-sign-sub{font-size:10px;color:var(--color-text-secondary);font-family:var(--font-mono);line-height:1.35;}
+
+
+    /* typeset */
+    .ts-inner{padding:14px;display:flex;flex-direction:column;gap:10px;}
+    .ts-textarea{width:100%;resize:none;font-size:14px;padding:8px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);font-family:var(--font-sans);height:64px;}
+    .ts-textarea:focus{outline:none;}
+    .dir-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;}
+    .dir-btn{padding:6px 4px;font-size:11px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-secondary);cursor:pointer;text-align:center;}
+    .dir-btn.active{border-color:var(--color-text-primary);color:var(--color-text-primary);font-weight:500;}
+    .slider-row{display:flex;align-items:center;gap:8px;}
+    .slider-row input[type=range]{flex:1;}
+    .sv{font-size:11px;color:var(--color-text-secondary);min-width:30px;text-align:right;}
+
+    /* right */
+    .right{border-left:0.5px solid var(--color-border-tertiary);padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--color-background-secondary);overflow-y:auto;}
+    .canvas-box{
+  background:var(--color-background-primary);
+  border:0.5px solid var(--color-border-tertiary);
+  border-radius:var(--border-radius-md);
+  min-height:420px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:28px;
+  overflow:auto;
+}
+    .share-box{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px;display:flex;flex-direction:column;gap:8px;}
+    .share-url{font-size:10px;font-family:var(--font-mono);color:var(--color-text-secondary);word-break:break-all;background:var(--color-background-secondary);padding:6px 8px;border-radius:4px;max-height:48px;overflow-y:auto;}
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--color-text-primary);color:var(--color-background-primary);padding:7px 14px;border-radius:var(--border-radius-md);font-size:12px;opacity:0;transition:opacity 0.2s;pointer-events:none;z-index:999;}
+    .toast.show{opacity:1;}
+    .sec-title{font-size:13px;font-weight:500;color:var(--color-text-primary);}
+    .empty-canvas{font-size:12px;color:var(--color-text-secondary);text-align:center;line-height:1.6;}
+
+    /* hieroglyph-friendly font stack */
+    .g-sym,
+    .slot,
+    .preview-box,
+    .cell-preview,
+    .compose-slots {
+      font-family: "Segoe UI Historic", "Noto Sans Egyptian Hieroglyphs", "Arial Unicode MS", serif;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <span class="topbar-title">Hieroglyph Font Designer</span>
+      <div class="mode-switch">
+        <span class="switch-label">Default Gardiner</span>
+        <button class="switch" id="modeSwitch" aria-pressed="false" title="Toggle default Gardiner mapping"></button>
+        <span class="mode-status" id="modeStatus">Custom mode</span>
+      </div>
+      <button class="btn" id="resetBtn">Reset</button>
+      <button class="btn" id="shareBtn">Share font ↗</button>
+      <button class="btn btn-primary" id="loadUrlBtn">Load from URL</button>
+    </div>
+
+    <div class="main">
+      <div class="left">
+        <div class="tabs">
+          <div class="tab active" data-tab="designer">Font Designer</div>
+          <div class="tab" data-tab="typeset">Typeset</div>
+        </div>
+
+        <div class="tab-content active" id="tab-designer">
+          <div class="font-grid" id="fontGrid"></div>
+
+          <div class="editor" id="editorPanel">
+            <div class="editor-header">
+              <div class="editor-letter-box" id="editorLetter">A</div>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:500;color:var(--color-text-primary);">Assign glyph to <span id="editorLetterName">A</span></div>
+                <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px;">Custom mode only. Toggle switch above to preview the default Gardiner mapping.</div>
+              </div>
+              <button class="btn" id="clearGlyphBtn" style="font-size:11px;padding:4px 9px;">Clear</button>
+            </div>
+
+            <div class="method-tabs" id="customMethodTabs">
+              <button class="mtab active" data-method="compose">Compose glyphs</button>
+              <button class="mtab" data-method="draw">Draw</button>
+            </div>
+
+            <div id="defaultModePanel" style="display:none;flex-direction:column;gap:10px;">
+              <div style="font-size:11px;color:var(--color-text-secondary);">Default mode uses the fixed Gardiner-based mapping for each latin letter.</div>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);">
+                <div style="width:84px;height:84px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:#fff;display:flex;align-items:center;justify-content:center;overflow:visible;padding:4px;" id="defaultGlyphPreview"></div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-size:12px;font-weight:500;color:var(--color-text-primary);">Default glyph for <span id="defaultGlyphLetter">A</span></div>
+                  <div style="font-size:11px;color:var(--color-text-secondary);" id="defaultGlyphCode">G1</div>
+                  <div style="font-size:11px;color:var(--color-text-secondary);" id="defaultGlyphName">Egyptian vulture</div>
+                  <div style="font-size:11px;color:var(--color-text-secondary);" id="defaultGlyphTransliteration">ꜣ (aleph)</div>
+                </div>
+              </div>
+              <div class="lbl">Gardiner sign list (uniliteral 24)</div>
+              <div class="default-sign-grid" id="defaultSignGrid"></div>
+            </div>
+
+            <div id="method-compose">
+              <div class="compose-area">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <div style="flex:1;">
+                    <div class="lbl" style="margin-bottom:5px;">Selected glyphs (click to add →)</div>
+                    <div class="compose-slots" id="composeSlots">
+                      <span style="font-size:11px;color:var(--color-text-secondary);">Click glyphs below to add</span>
+                    </div>
+                  </div>
+                  <div class="compose-preview">
+                    <div class="lbl" style="margin-bottom:4px;text-align:center;">Preview</div>
+                    <div class="preview-box" id="composePreview"><span style="color:var(--color-text-secondary);font-size:11px;">—</span></div>
+                    <button class="btn btn-primary" id="saveComposeBtn" style="margin-top:5px;font-size:11px;padding:4px 8px;width:72px;">Save</button>
+                  </div>
+                </div>
+                <input class="g-search" id="gSearch" placeholder="Search glyph code or name..." type="text">
+                <div class="gardiner-grid" id="gardinerGrid"></div>
+              </div>
+            </div>
+
+            <div id="method-draw" style="display:none;flex-direction:column;gap:8px;">
+              <div class="draw-panel">
+                <div style="font-size:11px;color:var(--color-text-secondary);">Draw large below. It will still be normalized into the final 48×48 glyph cell when saved.</div>
+                <div class="draw-stage">
+                  <div class="draw-preview-row">
+                    <div class="draw-large-wrap">
+                      <div class="lbl" style="margin-bottom:6px;">Drawing canvas</div>
+                      <div class="draw-large-box">
+                        <canvas id="drawCanvas" width="320" height="320" style="width:320px;height:320px;"></canvas>
+                      </div>
+                    </div>
+                    <div class="draw-small-preview">
+                      <div class="lbl" style="text-align:center;">48×48 preview</div>
+                      <div class="small-preview-box" id="drawMiniPreview"><span style="font-size:11px;color:var(--color-text-secondary);">—</span></div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <span style="font-size:11px;color:var(--color-text-secondary);">Brush</span>
+                    <input type="range" id="brushSize" min="2" max="18" value="6" step="1" style="width:120px;">
+                    <button class="btn" id="clearDrawBtn" style="font-size:11px;padding:4px 9px;">Clear</button>
+                    <button class="btn btn-primary" id="saveDrawBtn" style="font-size:11px;padding:4px 9px;">Save drawing</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-typeset">
+          <div class="ts-inner">
+            <div>
+              <span class="lbl" style="margin-bottom:5px;display:block;">Input text</span>
+              <textarea class="ts-textarea" id="tsInput" placeholder="Type to typeset...">HELLO WORLD</textarea>
+            </div>
+            <div>
+              <span class="lbl" style="margin-bottom:5px;display:block;">Direction</span>
+              <div class="dir-btns">
+                <button class="dir-btn active" data-dir="ltr">L → R</button>
+                <button class="dir-btn" data-dir="rtl">R → L</button>
+                <button class="dir-btn" data-dir="ttb">T ↓ B</button>
+              </div>
+            </div>
+            <div><span class="lbl">Tracking</span>
+              <div class="slider-row"><input type="range" id="tracking" min="0" max="48" value="8" step="1"><span class="sv" id="trackingVal">8px</span></div>
+            </div>
+            <div><span class="lbl">Leading</span>
+              <div class="slider-row"><input type="range" id="leading" min="32" max="120" value="56" step="1"><span class="sv" id="leadingVal">56px</span></div>
+            </div>
+            <div><span class="lbl">Glyph size</span>
+              <div class="slider-row"><input type="range" id="glyphSize" min="20" max="80" value="40" step="1"><span class="sv" id="glyphSizeVal">40px</span></div>
+            </div>
+            <button class="btn" id="copyGlyphs">Copy as text</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span class="sec-title">Preview</span>
+          <span style="font-size:11px;color:var(--color-text-secondary);" id="progressLabel">0 / 26</span>
+        </div>
+        <div class="canvas-box" id="renderCanvas">
+          <div class="empty-canvas">Assign glyphs to letters<br>then go to Typeset tab</div>
+        </div>
+        <div class="share-box">
+          <span class="lbl">Shareable link</span>
+          <div class="share-url" id="shareUrl">Assign glyphs to generate link.</div>
+          <button class="btn" id="copyLinkBtn">Copy link</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const CELL_SIZE = 48;
+
+    const GARDINER_LIST = [
+      {sym:'𓄿',code:'G1',name:'vulture'},{sym:'𓅀',code:'G2',name:'vulture+stroke'},{sym:'𓅁',code:'G3',name:'vulture+quail'},{sym:'𓅂',code:'G4',name:'buzzard'},
+      {sym:'𓅃',code:'G5',name:'falcon'},{sym:'𓅄',code:'G6',name:'falcon+flag'},{sym:'𓅅',code:'G7',name:'falcon+sun'},{sym:'𓅆',code:'G8',name:'falcon+basket'},
+      {sym:'𓅇',code:'G9',name:'falcon+cobra'},{sym:'𓅈',code:'G10',name:'falcon on standard'},{sym:'𓅉',code:'G11',name:'falcon+feather'},{sym:'𓅊',code:'G12',name:'sacred falcon'},
+      {sym:'𓅋',code:'G13',name:'falcon+sun+cobra'},{sym:'𓅌',code:'G14',name:'vulture with flail'},{sym:'𓅍',code:'G15',name:'vulture with feather'},{sym:'𓅎',code:'G16',name:'two falcons'},
+      {sym:'𓅓',code:'G17',name:'owl'},{sym:'𓅔',code:'G18',name:'two owls'},{sym:'𓅱',code:'G43',name:'quail chick'},{sym:'𓅲',code:'G44',name:'two quail chicks'},
+      {sym:'𓆑',code:'I9',name:'horned viper'},{sym:'𓆓',code:'I10',name:'cobra'},{sym:'𓆗',code:'I13',name:'cobra+basket'},{sym:'𓆙',code:'I14',name:'snake'},
+      {sym:'𓃀',code:'D58',name:'foot'},{sym:'𓂧',code:'D46',name:'hand'},{sym:'𓂋',code:'D21',name:'mouth'},{sym:'𓂝',code:'D36',name:'arm'},
+      {sym:'𓈖',code:'N35',name:'water'},{sym:'𓈗',code:'N36',name:'canal'},{sym:'𓎡',code:'V31',name:'basket'},{sym:'𓎼',code:'V33',name:'bag'},
+      {sym:'𓋴',code:'S29',name:'cloth'},{sym:'𓏏',code:'X1',name:'bread'},{sym:'𓊃',code:'Z7',name:'bolt'},{sym:'𓇋',code:'M17',name:'reed'},
+      {sym:'𓇌',code:'M17+',name:'two reeds'},{sym:'𓉔',code:'O4',name:'shelter'},{sym:'𓊪',code:'Q3',name:'stool'},{sym:'𓈎',code:'N29',name:'hill slope'},
+      {sym:'𓃭',code:'F22',name:'lion'},{sym:'𓏛',code:'Y1',name:'papyrus'},{sym:'𓂻',code:'D54',name:'legs walking'},{sym:'𓀀',code:'A1',name:'seated man'},
+      {sym:'𓀁',code:'A2',name:'man with hand to mouth'},{sym:'𓀃',code:'A4',name:'man with hand up'},{sym:'𓀆',code:'A7',name:'man with jar'},{sym:'𓀗',code:'A24',name:'man striking'},
+      {sym:'𓁐',code:'B1',name:'seated woman'},{sym:'𓁢',code:'C1',name:'man with sun'},{sym:'𓁹',code:'D4',name:'eye'},{sym:'𓂀',code:'D10',name:'eye of horus'},
+      {sym:'𓂃',code:'D13',name:'eyebrow'},{sym:'𓂉',code:'D48',name:'palm'},{sym:'𓂓',code:'D28',name:'arms raised'},{sym:'𓃒',code:'E1',name:'bull'},
+      {sym:'𓃗',code:'E6',name:'horse'},{sym:'𓃙',code:'E8',name:'calf'},{sym:'𓃟',code:'E14',name:'dog'},{sym:'𓃠',code:'E15',name:'lying dog'},
+      {sym:'𓄂',code:'E28',name:'giraffe'},{sym:'𓄃',code:'E29',name:'donkey'},{sym:'𓄔',code:'F12',name:'neck of animal'},{sym:'𓄖',code:'F13',name:'horns'},
+      {sym:'𓄡',code:'F29',name:'animal belly'},{sym:'𓄣',code:'F31',name:'hides'},{sym:'𓄤',code:'F32',name:'belly'},{sym:'𓄧',code:'F35',name:'necklace'},
+      {sym:'𓆈',code:'I3',name:'crocodile'},{sym:'𓆏',code:'I8',name:'frog'},{sym:'𓆐',code:'I8a',name:'tadpole'},{sym:'𓇂',code:'L2',name:'bee'},
+      {sym:'𓇆',code:'M4',name:'palm branch'},{sym:'𓇈',code:'M6',name:'shoot'},{sym:'𓇍',code:'M18',name:'reed+water'},{sym:'𓇎',code:'M19',name:'baskets on pole'},
+      {sym:'𓇗',code:'M26',name:'flowering sedge'},{sym:'𓇙',code:'M28',name:'sedge'},{sym:'𓇛',code:'M29',name:'pod'},{sym:'𓇟',code:'M33',name:'grain'},
+      {sym:'𓇠',code:'M34',name:'grain+stroke'},{sym:'𓇢',code:'M36',name:'flax'},{sym:'𓇤',code:'M38',name:'bundle'},{sym:'𓇥',code:'M39',name:'basket of figs'},
+      {sym:'𓉐',code:'O1',name:'house'},{sym:'𓉑',code:'O2',name:'house+stroke'},{sym:'𓉗',code:'O6',name:'enclosure'},{sym:'𓉘',code:'O7',name:'wall'},
+      {sym:'𓊀',code:'O29',name:'wooden column'},{sym:'𓊁',code:'O30',name:'supporting poles'},{sym:'𓊃',code:'Z7',name:'bolt'},{sym:'𓊋',code:'P1',name:'boat'},
+      {sym:'𓊌',code:'P2',name:'boat+sail'},{sym:'𓊍',code:'P3',name:'sacred bark'},{sym:'𓊏',code:'P5',name:'sail'},{sym:'𓊐',code:'P6',name:'mast'},
+      {sym:'𓋀',code:'S1',name:'double crown'},{sym:'𓋁',code:'S2',name:'red crown'},{sym:'𓋃',code:'S3',name:'white crown'},{sym:'𓋇',code:'S5',name:'double crown+cobra'},
+      {sym:'𓋉',code:'S6',name:'atef crown'},{sym:'𓋍',code:'S8',name:'atef+horns'},{sym:'𓋏',code:'S9',name:'feathered crown'},{sym:'𓋔',code:'S12',name:'collar'},
+      {sym:'𓌀',code:'T3',name:'mace'},{sym:'𓌁',code:'T4',name:'mace+stroke'},{sym:'𓌃',code:'T7',name:'axe'},{sym:'𓌅',code:'T9',name:'bow'},
+      {sym:'𓌇',code:'T10',name:'arrow'},{sym:'𓌈',code:'T11',name:'two arrows'},{sym:'𓌉',code:'T12',name:'quiver'},{sym:'𓌋',code:'T14',name:'throw stick'},
+      {sym:'𓎛',code:'U1',name:'sickle'},{sym:'𓎜',code:'U2',name:'sickle+stroke'},{sym:'𓎟',code:'U5',name:'hoe'},{sym:'𓎠',code:'U6',name:'hoe+stroke'},
+      {sym:'𓎣',code:'U9',name:'grain measure'},{sym:'𓎤',code:'U10',name:'grain measure+stroke'},{sym:'𓎧',code:'U13',name:'plow'},{sym:'𓎩',code:'U15',name:'sledge'},
+      {sym:'𓏀',code:'V1',name:'coil of rope'},{sym:'𓏁',code:'V2',name:'coil+stroke'},{sym:'𓏃',code:'V4',name:'lasso'},{sym:'𓏄',code:'V5',name:'lasso+stroke'},
+      {sym:'𓏇',code:'V7',name:'ring'},{sym:'𓏈',code:'V8',name:'cartouche'},{sym:'𓏉',code:'V9',name:'shen ring'},{sym:'𓏋',code:'V11',name:'cartouche outline'},
+      {sym:'𓐍',code:'W1',name:'oil jar'},{sym:'𓐎',code:'W2',name:'oil jar+stroke'},{sym:'𓐏',code:'W3',name:'alabaster basin'},{sym:'𓐔',code:'W9',name:'stone jug'},
+      {sym:'𓐕',code:'W10',name:'cup'},{sym:'𓐖',code:'W11',name:'stand for jars'},{sym:'𓐗',code:'W12',name:'pot'},{sym:'𓐘',code:'W13',name:'milk jug'},
+      {sym:'𓑀',code:'X2',name:'bread cone'},{sym:'𓑁',code:'X3',name:'bread roll'},{sym:'𓑃',code:'X5',name:'pita bread'},{sym:'𓑄',code:'X6',name:'round loaf'},
+      {sym:'𓇯',code:'N1',name:'sky'},{sym:'𓇰',code:'N2',name:'sky+scepter'},{sym:'𓇳',code:'N5',name:'sun'},{sym:'𓇴',code:'N6',name:'sun+uraeus'},
+      {sym:'𓇵',code:'N7',name:'sun+stroke'},{sym:'𓇶',code:'N8',name:'sunshine'},{sym:'𓇷',code:'N9',name:'moon'},{sym:'𓇸',code:'N10',name:'crescent'},
+      {sym:'𓇹',code:'N11',name:'crescent+stroke'},{sym:'𓇼',code:'N14',name:'star'},{sym:'𓇽',code:'N15',name:'star in circle'},{sym:'𓈀',code:'N17',name:'flat land'},
+      {sym:'𓈁',code:'N18',name:'sandy tract'},{sym:'𓈃',code:'N20',name:'tongue of land'},{sym:'𓈄',code:'N21',name:'land+stroke'},{sym:'𓈅',code:'N22',name:'land+two strokes'},
+    ];
+
+    let font = {};
+    let selectedLetter = 'A';
+    let currentMethod = 'compose';
+    let tsDirection = 'ltr';
+    let compositionSlots = [];
+    let isDrawing = false;
+    let drawCtx = null;
+    let useDefaultMapping = false;
+
+    const DEFAULT_GARDINER_MAP = {
+      A:{sym:'𓄿', code:'G1', name:'Egyptian vulture', transliteration:'ꜣ (aleph)'},
+      B:{sym:'𓃀', code:'D58', name:'Foot', transliteration:'b'},
+      C:{sym:'𓎡', code:'V31', name:'Basket with handle', transliteration:'k'},
+      D:{sym:'𓂧', code:'D46', name:'Hand', transliteration:'d'},
+      E:{sym:'𓇋', code:'M17', name:'Reed', transliteration:'y (vowel → y)'},
+      F:{sym:'𓆑', code:'I9', name:'Horned viper', transliteration:'f'},
+      G:{sym:'𓎼', code:'V33', name:'Bag', transliteration:'g (approx.)'},
+      H:{sym:'𓉔', code:'O4', name:'Shelter', transliteration:'ḥ'},
+      I:{sym:'𓇋', code:'M17', name:'Reed', transliteration:'y (vowel → y)'},
+      J:{sym:'𓆓', code:'I10', name:'Cobra', transliteration:'ḏ'},
+      K:{sym:'𓎡', code:'V31', name:'Basket with handle', transliteration:'k'},
+      L:{sym:'𓃭', code:'F22', name:'Lion', transliteration:'r (approx.)'},
+      M:{sym:'𓅓', code:'G17', name:'Owl', transliteration:'m'},
+      N:{sym:'𓈖', code:'N35', name:'Water', transliteration:'n'},
+      O:{sym:'𓅱', code:'G43', name:'Quail chick', transliteration:'w (vowel → w)'},
+      P:{sym:'𓊪', code:'Q3', name:'Stool', transliteration:'p'},
+      Q:{sym:'𓈎', code:'N29', name:'Hill slope', transliteration:'q'},
+      R:{sym:'𓂋', code:'D21', name:'Mouth', transliteration:'r'},
+      S:{sym:'𓋴', code:'S29', name:'Folded cloth', transliteration:'s'},
+      T:{sym:'𓏏', code:'X1', name:'Bread loaf', transliteration:'t'},
+      U:{sym:'𓅱', code:'G43', name:'Quail chick', transliteration:'w (vowel → w)'},
+      V:{sym:'𓆑', code:'I9', name:'Horned viper', transliteration:'f (approx.)'},
+      W:{sym:'𓅱', code:'G43', name:'Quail chick', transliteration:'w'},
+      X:{sym:'𓎸', code:'V28', name:'Wick', transliteration:'ḫ (approx.)'},
+      Y:{sym:'𓇌', code:'M17+', name:'Two reeds', transliteration:'y'},
+      Z:{sym:'𓊃', code:'Z7', name:'Door bolt', transliteration:'z / s'}
+    };
+
+    function getEffectiveGlyph(letter) {
+      if (useDefaultMapping && DEFAULT_GARDINER_MAP[letter]) {
+        return { type:'compose', glyphs:[DEFAULT_GARDINER_MAP[letter].sym], source:'default' };
+      }
+      return font[letter] || null;
+    }
+
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    function getHieroglyphFontStack(fontSize) {
+      return `${fontSize}px "Segoe UI Historic", "Noto Sans Egyptian Hieroglyphs", "Arial Unicode MS", serif`;
+    }
+
+    function renderGlyphToCanvas(glyphData, targetCanvas, size) {
+      const ctx = targetCanvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+      if (!glyphData) return;
+
+      const inset = Math.max(3, Math.round(size * 0.14));
+      const drawSize = size - inset * 2;
+
+      if (glyphData.type === 'draw' && glyphData.dataUrl) {
+        const img = new Image();
+        img.onload = () => { ctx.drawImage(img, inset, inset, drawSize, drawSize); };
+        img.src = glyphData.dataUrl;
+      } else if (glyphData.type === 'compose' && glyphData.glyphs && glyphData.glyphs.length > 0) {
+        const n = glyphData.glyphs.length;
+        const slotW = drawSize / n;
+
+        // Make default single-sign glyphs substantially larger but leave more margin
+        const fontSize =
+          n === 1 ? Math.round(drawSize * 0.96) :
+          n === 2 ? Math.round(drawSize * 0.64) :
+                    Math.round(drawSize * 0.50);
+
+        ctx.font = getHieroglyphFontStack(fontSize);
+        ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = 'center';
+        glyphData.glyphs.forEach((sym, i) => {
+          // Measure actual glyph bounds and fit it inside each slot with extra safety margin
+          const metrics = ctx.measureText(sym);
+          const left = metrics.actualBoundingBoxLeft || fontSize * 0.12;
+          const right = metrics.actualBoundingBoxRight || fontSize * 0.12;
+          const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.55;
+          const descent = metrics.actualBoundingBoxDescent || fontSize * 0.22;
+          const boxW = left + right;
+          const boxH = ascent + descent;
+
+          const availW = slotW * 0.88;
+          const availH = drawSize * 0.84;
+          const scale = Math.min(
+            1,
+            availW / Math.max(boxW, 1),
+            availH / Math.max(boxH, 1)
+          );
+
+          const cx = inset + slotW * i + slotW / 2;
+          const cy = inset + drawSize / 2;
+
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.scale(scale, scale);
+          ctx.fillText(sym, (left - right) / 2, (ascent - descent) / 2);
+          ctx.restore();
+        });
+      }
+    }
+
+    function makeGlyphElement(glyphData, size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      canvas.style.width = size + 'px';
+      canvas.style.height = size + 'px';
+      renderGlyphToCanvas(glyphData, canvas, size);
+      return canvas;
+    }
+
+    function buildFontGrid() {
+      const grid = document.getElementById('fontGrid');
+      grid.innerHTML = '';
+      LETTERS.forEach(l => {
+        const cell = document.createElement('div');
+        const effectiveGlyph = getEffectiveGlyph(l);
+        const has = !!effectiveGlyph;
+        const isCustom = !!font[l];
+        cell.className = 'font-cell' + (has ? ' has-glyph' : '') + (l === selectedLetter ? ' selected' : '');
+        const preview = document.createElement('div');
+        preview.className = 'cell-preview';
+        if (has) {
+          const c = makeGlyphElement(effectiveGlyph, useDefaultMapping ? 38 : 36);
+          if (useDefaultMapping && !isCustom) preview.title = 'Default Gardiner glyph';
+          preview.appendChild(c);
+        } else {
+          preview.innerHTML = '<span style="font-size:18px;color:var(--color-border-secondary);">+</span>';
+        }
+        cell.innerHTML = `<span class="cell-letter">${l}</span>`;
+        cell.appendChild(preview);
+        cell.onclick = () => { selectedLetter = l; buildFontGrid(); updateEditor(); };
+        grid.appendChild(cell);
+      });
+    }
+
+    function updateProgress() {
+      const n = Object.keys(font).filter(k => font[k]).length;
+      document.getElementById('progressLabel').textContent = n + ' / 26 custom';
+      document.getElementById('modeStatus').textContent = useDefaultMapping ? 'Default mode' : 'Custom mode';
+      document.getElementById('modeSwitch').classList.toggle('on', useDefaultMapping);
+      document.getElementById('modeSwitch').setAttribute('aria-pressed', useDefaultMapping ? 'true' : 'false');
+    }
+    function updateEditorModeUI() {
+      const customTabs = document.getElementById('customMethodTabs');
+      const composePanel = document.getElementById('method-compose');
+      const drawPanel = document.getElementById('method-draw');
+      const defaultPanel = document.getElementById('defaultModePanel');
+      const clearBtn = document.getElementById('clearGlyphBtn');
+
+      if (useDefaultMapping) {
+        customTabs.style.display = 'none';
+        composePanel.style.display = 'none';
+        drawPanel.style.display = 'none';
+        defaultPanel.style.display = 'flex';
+        clearBtn.style.display = 'none';
+
+        const meta = DEFAULT_GARDINER_MAP[selectedLetter];
+        document.getElementById('defaultGlyphLetter').textContent = selectedLetter;
+        document.getElementById('defaultGlyphCode').textContent = meta ? meta.code : '—';
+        document.getElementById('defaultGlyphName').textContent = meta ? meta.name : '—';
+        document.getElementById('defaultGlyphTransliteration').textContent = meta ? meta.transliteration : '—';
+        const preview = document.getElementById('defaultGlyphPreview');
+        preview.innerHTML = '';
+        if (meta) {
+          preview.appendChild(makeGlyphElement({type:'compose', glyphs:[meta.sym]}, 72));
+        } else {
+          preview.innerHTML = '<span style="font-size:11px;color:var(--color-text-secondary);">—</span>';
+        }
+      } else {
+        customTabs.style.display = 'flex';
+        defaultPanel.style.display = 'none';
+        clearBtn.style.display = 'inline-flex';
+        composePanel.style.display = currentMethod === 'compose' ? 'block' : 'none';
+        drawPanel.style.display = currentMethod === 'draw' ? 'flex' : 'none';
+      }
+      buildDefaultSignGrid();
+    }
+
+
+    function updateEditor() {
+      document.getElementById('editorLetter').textContent = selectedLetter;
+      document.getElementById('editorLetterName').textContent = selectedLetter;
+
+      if (!useDefaultMapping && currentMethod === 'compose') {
+        const cur = font[selectedLetter];
+        compositionSlots = (cur && cur.type === 'compose') ? [...cur.glyphs] : [];
+        renderSlots();
+        updateGardinerHighlights();
+        updateComposePreview();
+      }
+      if (!useDefaultMapping && currentMethod === 'draw') restoreDrawing();
+
+      updateEditorModeUI();
+    }
+
+    function renderSlots() {
+      const el = document.getElementById('composeSlots');
+      el.innerHTML = '';
+      if (compositionSlots.length === 0) {
+        el.innerHTML = '<span style="font-size:11px;color:var(--color-text-secondary);">Click glyphs below to add</span>';
+        return;
+      }
+      compositionSlots.forEach((sym, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.style.fontSize = '26px';
+        slot.textContent = sym;
+        const rm = document.createElement('span');
+        rm.className = 'rm';
+        rm.textContent = '×';
+        rm.onclick = (e) => {
+          e.stopPropagation();
+          compositionSlots.splice(i, 1);
+          renderSlots();
+          updateGardinerHighlights();
+          updateComposePreview();
+        };
+        slot.appendChild(rm);
+        el.appendChild(slot);
+      });
+      if (compositionSlots.length < 4) {
+        const add = document.createElement('div');
+        add.className = 'slot-add';
+        add.textContent = '+';
+        el.appendChild(add);
+      }
+    }
+
+    function updateComposePreview() {
+      const preview = document.getElementById('composePreview');
+      preview.innerHTML = '';
+      if (compositionSlots.length === 0) {
+        preview.innerHTML = '<span style="color:var(--color-text-secondary);font-size:11px;">—</span>';
+        return;
+      }
+      const tempFont = { type: 'compose', glyphs: compositionSlots };
+      const c = makeGlyphElement(tempFont, 64);
+      preview.appendChild(c);
+    }
+
+    document.getElementById('saveComposeBtn').onclick = () => {
+      if (compositionSlots.length === 0) {
+        toast('Add at least one glyph');
+        return;
+      }
+      font[selectedLetter] = { type: 'compose', glyphs: [...compositionSlots] };
+      buildFontGrid();
+      updateProgress();
+      updateShareUrl();
+      renderTypeset();
+      toast(selectedLetter + ' saved!');
+    };
+
+    function buildGardinerGrid(filter) {
+      const grid = document.getElementById('gardinerGrid');
+      grid.innerHTML = '';
+      const list = filter
+        ? GARDINER_LIST.filter(g => g.code.toLowerCase().includes(filter) || g.name.toLowerCase().includes(filter))
+        : GARDINER_LIST;
+
+      list.forEach(g => {
+        const item = document.createElement('div');
+        item.className = 'g-item' + (compositionSlots.includes(g.sym) ? ' in-slot' : '');
+        item.dataset.sym = g.sym;
+        item.innerHTML = `<span class="g-sym">${g.sym}</span><span class="g-code">${g.code}</span>`;
+        item.title = g.name;
+        item.onclick = () => {
+          if (compositionSlots.includes(g.sym)) {
+            const idx = compositionSlots.indexOf(g.sym);
+            compositionSlots.splice(idx, 1);
+          } else {
+            if (compositionSlots.length >= 4) {
+              toast('Max 4 glyphs per slot');
+              return;
+            }
+            compositionSlots.push(g.sym);
+          }
+          renderSlots();
+          updateGardinerHighlights();
+          updateComposePreview();
+        };
+        grid.appendChild(item);
+      });
+    }
+
+    function updateGardinerHighlights() {
+      document.querySelectorAll('.g-item').forEach(el => {
+        el.classList.toggle('in-slot', compositionSlots.includes(el.dataset.sym));
+      });
+    }
+
+    document.getElementById('gSearch').addEventListener('input', e => {
+      buildGardinerGrid(e.target.value.toLowerCase().trim() || null);
+    });
+
+    function initDrawCanvas() {
+      const canvas = document.getElementById('drawCanvas');
+      drawCtx = canvas.getContext('2d');
+      drawCtx.lineJoin = 'round';
+      drawCtx.lineCap = 'round';
+      clearDrawCanvas();
+
+      const pos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / r.width;
+        const scaleY = canvas.height / r.height;
+        const src = e.touches ? e.touches[0] : e;
+        return { x: (src.clientX - r.left) * scaleX, y: (src.clientY - r.top) * scaleY };
+      };
+
+      canvas.onmousedown = e => {
+        isDrawing = true;
+        drawCtx.beginPath();
+        const p = pos(e);
+        drawCtx.moveTo(p.x, p.y);
+      };
+      canvas.onmousemove = e => {
+        if (!isDrawing) return;
+        const p = pos(e);
+        drawCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary') || '#222';
+        drawCtx.lineWidth = parseInt(document.getElementById('brushSize').value) * 2;
+        drawCtx.lineTo(p.x, p.y);
+        drawCtx.stroke();
+        updateDrawMiniPreview();
+      };
+      canvas.onmouseup = canvas.onmouseleave = () => { isDrawing = false; };
+      canvas.ontouchstart = e => {
+        e.preventDefault();
+        isDrawing = true;
+        drawCtx.beginPath();
+        const p = pos(e);
+        drawCtx.moveTo(p.x, p.y);
+      };
+      canvas.ontouchmove = e => {
+        e.preventDefault();
+        if (!isDrawing) return;
+        const p = pos(e);
+        drawCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary') || '#222';
+        drawCtx.lineWidth = parseInt(document.getElementById('brushSize').value) * 2;
+        drawCtx.lineTo(p.x, p.y);
+        drawCtx.stroke();
+        updateDrawMiniPreview();
+      };
+      canvas.ontouchend = () => { isDrawing = false; };
+    }
+
+    function clearDrawCanvas() {
+      if (!drawCtx) return;
+      const canvas = document.getElementById('drawCanvas');
+      drawCtx.clearRect(0, 0, canvas.width, canvas.height);
+      drawCtx.fillStyle = '#ffffff';
+      drawCtx.fillRect(0, 0, canvas.width, canvas.height);
+      updateDrawMiniPreview();
+    }
+
+    function updateDrawMiniPreview() {
+      const box = document.getElementById('drawMiniPreview');
+      if (!box) return;
+      const canvas = document.getElementById('drawCanvas');
+      if (!canvas) return;
+      box.innerHTML = '';
+      const mini = document.createElement('canvas');
+      mini.width = CELL_SIZE;
+      mini.height = CELL_SIZE;
+      mini.style.width = '48px';
+      mini.style.height = '48px';
+      mini.getContext('2d').drawImage(canvas, 0, 0, CELL_SIZE, CELL_SIZE);
+      box.appendChild(mini);
+    }
+
+    function restoreDrawing() {
+      const cur = font[selectedLetter];
+      if (cur && cur.type === 'draw' && cur.dataUrl) {
+        const img = new Image();
+        img.onload = () => {
+          clearDrawCanvas();
+          drawCtx.drawImage(img, 0, 0, 320, 320);
+          updateDrawMiniPreview();
+        };
+        img.src = cur.dataUrl;
+      } else {
+        clearDrawCanvas();
+      }
+    }
+
+    document.getElementById('clearDrawBtn').onclick = clearDrawCanvas;
+    document.getElementById('saveDrawBtn').onclick = () => {
+      const canvas = document.getElementById('drawCanvas');
+      const norm = document.createElement('canvas');
+      norm.width = CELL_SIZE;
+      norm.height = CELL_SIZE;
+      norm.getContext('2d').drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, CELL_SIZE, CELL_SIZE);
+      const dataUrl = norm.toDataURL('image/png');
+      font[selectedLetter] = { type: 'draw', dataUrl };
+      buildFontGrid();
+      updateProgress();
+      renderTypeset();
+      toast(selectedLetter + ' drawing saved!');
+    };
+
+    function renderTypeset() {
+      const canvasBox = document.getElementById('renderCanvas');
+      const raw = (document.getElementById('tsInput').value || '').toUpperCase();
+      const tracking = parseInt(document.getElementById('tracking').value);
+      const leading = parseInt(document.getElementById('leading').value);
+      const size = parseInt(document.getElementById('glyphSize').value);
+
+      const assigned = useDefaultMapping ? 26 : Object.keys(font).filter(k => font[k]).length;
+      if (assigned === 0) {
+        canvasBox.innerHTML = '<div class="empty-canvas">Assign glyphs to letters<br>then go to Typeset tab</div>';
+        return;
+      }
+      if (!raw.trim()) {
+        canvasBox.innerHTML = '<div class="empty-canvas">Type text in Typeset tab</div>';
+        return;
+      }
+
+      const lines = raw.split('\n');
+      canvasBox.innerHTML = '';
+
+      const makeCell = (letter) => {
+        const g = getEffectiveGlyph(letter);
+        const wrap = document.createElement('div');
+        wrap.style.cssText = `width:${size}px;height:${size}px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;`;
+        wrap.title = letter;
+        if (!g) {
+          wrap.style.opacity = '0.3';
+          const sp = document.createElement('span');
+          sp.style.cssText = `font-size:${Math.round(size*0.4)}px;color:var(--color-text-secondary);font-family:var(--font-mono);`;
+          sp.textContent = letter;
+          wrap.appendChild(sp);
+        } else {
+          const c = makeGlyphElement(g, size);
+          wrap.appendChild(c);
+        }
+        return wrap;
+      };
+
+      if (tsDirection === 'ltr' || tsDirection === 'rtl') {
+        const outer = document.createElement('div');
+        outer.style.cssText = `display:flex;flex-direction:column;gap:${leading}px;align-items:${tsDirection==='rtl'?'flex-end':'flex-start'};width:100%;`;
+        lines.forEach(line => {
+          const chars = tsDirection === 'rtl' ? [...line].reverse() : [...line];
+          const row = document.createElement('div');
+          row.style.cssText = `display:flex;flex-direction:row;gap:${tracking}px;align-items:center;flex-wrap:wrap;`;
+          chars.forEach(ch => {
+            if (ch === ' ') {
+              const sp = document.createElement('div');
+              sp.style.width = Math.round(size*0.5)+'px';
+              row.appendChild(sp);
+              return;
+            }
+            if (!/[A-Z]/.test(ch)) return;
+            row.appendChild(makeCell(ch));
+          });
+          outer.appendChild(row);
+        });
+        canvasBox.appendChild(outer);
+      } else {
+        const outer = document.createElement('div');
+        outer.style.cssText = `display:flex;flex-direction:row;gap:${tracking+12}px;align-items:flex-start;`;
+        lines.forEach(line => {
+          const col = document.createElement('div');
+          col.style.cssText = `display:flex;flex-direction:column;gap:${Math.round(leading*0.3)}px;align-items:center;`;
+          [...line].forEach(ch => {
+            if (ch === ' ') {
+              const sp = document.createElement('div');
+              sp.style.height = Math.round(size*0.4)+'px';
+              col.appendChild(sp);
+              return;
+            }
+            if (!/[A-Z]/.test(ch)) return;
+            col.appendChild(makeCell(ch));
+          });
+          outer.appendChild(col);
+        });
+        canvasBox.appendChild(outer);
+      }
+    }
+
+    function fontToEncoded() {
+      const out = {};
+      LETTERS.forEach(l => {
+        if (!font[l]) return;
+        if (font[l].type === 'compose') out[l] = { t: 'c', g: font[l].glyphs };
+        else if (font[l].type === 'draw') out[l] = { t: 'd', u: font[l].dataUrl };
+      });
+      return btoa(unescape(encodeURIComponent(JSON.stringify(out))));
+    }
+
+    function encodedToFont(str) {
+      try {
+        const data = JSON.parse(decodeURIComponent(escape(atob(str))));
+        LETTERS.forEach(l => {
+          if (!data[l]) return;
+          if (data[l].t === 'c') font[l] = { type: 'compose', glyphs: data[l].g };
+          else if (data[l].t === 'd') font[l] = { type: 'draw', dataUrl: data[l].u };
+        });
+        return true;
+      } catch(e) {
+        return false;
+      }
+    }
+
+    function updateShareUrl() {
+      const n = Object.keys(font).filter(k => font[k]).length;
+      if (n === 0) {
+        document.getElementById('shareUrl').textContent = 'Assign glyphs to generate link.';
+        return;
+      }
+      const encoded = fontToEncoded();
+      const url = window.location.href.split('?')[0] + '?font=' + encoded;
+      document.getElementById('shareUrl').textContent = url;
+    }
+
+    document.getElementById('shareBtn').onclick = () => {
+      const n = Object.keys(font).filter(k => font[k]).length;
+      if (n === 0) {
+        toast('Assign at least one glyph first');
+        return;
+      }
+      navigator.clipboard.writeText(document.getElementById('shareUrl').textContent).then(() => toast('Link copied!'));
+    };
+
+    document.getElementById('copyLinkBtn').onclick = () => {
+      const url = document.getElementById('shareUrl').textContent;
+      if (!url.includes('?')) {
+        toast('No link yet');
+        return;
+      }
+      navigator.clipboard.writeText(url).then(() => toast('Copied!'));
+    };
+
+    document.getElementById('resetBtn').onclick = () => {
+      if (!confirm('Reset all glyph assignments?')) return;
+      font = {};
+      compositionSlots = [];
+      buildFontGrid();
+      updateProgress();
+      updateShareUrl();
+      renderTypeset();
+      clearDrawCanvas();
+    };
+
+    document.getElementById('loadUrlBtn').onclick = () => {
+      const input = prompt('Paste shared font URL or encoded string:');
+      if (!input) return;
+      const match = input.match(/[?&]font=([^&]+)/);
+      const encoded = match ? match[1] : input.trim();
+      if (encodedToFont(encoded)) {
+        buildFontGrid();
+        updateProgress();
+        updateShareUrl();
+        renderTypeset();
+        toast('Font loaded!');
+      } else {
+        toast('Invalid font data');
+      }
+    };
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        if (tab.dataset.tab === 'typeset') renderTypeset();
+      };
+    });
+
+    document.querySelectorAll('.mtab').forEach(btn => {
+      btn.onclick = () => {
+        currentMethod = btn.dataset.method;
+        document.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateEditorModeUI();
+        if (useDefaultMapping) return;
+        if (currentMethod === 'draw') restoreDrawing();
+        if (currentMethod === 'compose') {
+          compositionSlots = (font[selectedLetter] && font[selectedLetter].type === 'compose') ? [...font[selectedLetter].glyphs] : [];
+          renderSlots();
+          updateGardinerHighlights();
+          updateComposePreview();
+        }
+      };
+    });
+
+    document.querySelectorAll('.dir-btn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tsDirection = btn.dataset.dir;
+        renderTypeset();
+      };
+    });
+
+    ['tracking','leading','glyphSize'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', () => {
+        document.getElementById(id+'Val').textContent = el.value+'px';
+        renderTypeset();
+      });
+    });
+
+    document.getElementById('tsInput').addEventListener('input', renderTypeset);
+
+
+    const modeSwitch = document.getElementById('modeSwitch');
+    modeSwitch.onclick = () => {
+      useDefaultMapping = !useDefaultMapping;
+      buildFontGrid();
+      updateProgress();
+      updateEditor();
+      renderTypeset();
+      toast(useDefaultMapping ? 'Default Gardiner mapping enabled' : 'Custom mode enabled');
+    };
+
+    document.getElementById('clearGlyphBtn').onclick = () => {
+      font[selectedLetter] = null;
+      compositionSlots = [];
+      renderSlots();
+      updateGardinerHighlights();
+      updateComposePreview();
+      buildFontGrid();
+      updateProgress();
+      updateShareUrl();
+      renderTypeset();
+    };
+
+    const copyGlyphsBtn = document.getElementById('copyGlyphs');
+    if (copyGlyphsBtn) {
+      copyGlyphsBtn.onclick = () => {
+        const raw = (document.getElementById('tsInput').value || '').toUpperCase();
+        let output = '';
+        for (const ch of raw) {
+          if (ch === ' ') {
+            output += ' ';
+          } else if (getEffectiveGlyph(ch) && getEffectiveGlyph(ch).type === 'compose') {
+            output += getEffectiveGlyph(ch).glyphs.join('');
+          } else if (/[A-Z]/.test(ch)) {
+            output += ch;
+          } else if (ch === '\n') {
+            output += '\n';
+          }
+        }
+        navigator.clipboard.writeText(output).then(() => toast('Glyph text copied!'));
+      };
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('font')) encodedToFont(urlParams.get('font'));
+
+    buildGardinerGrid();
+    buildFontGrid();
+    initDrawCanvas();
+    updateProgress();
+    updateEditor();
+    updateShareUrl();
+    renderTypeset();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1512 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hieroglyph Font Designer</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cinzel+Decorative:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sand:       #c9a96e;
+      --sand-light: #e8d5b0;
+      --sand-dark:  #8b6f3e;
+      --obsidian:   #0e0b08;
+      --stone:      #1a1510;
+      --stone-mid:  #251e16;
+      --stone-light:#32291e;
+      --gold:       #d4a843;
+      --gold-bright:#f0c060;
+      --gold-dim:   #7a5c1e;
+      --papyrus:    #f4e8c8;
+      --lapis:      #2a4a7a;
+      --turquoise:  #2a8a6a;
+      --crimson:    #8a2a2a;
+      --glow:       rgba(212,168,67,0.18);
+      --glow-strong:rgba(212,168,67,0.35);
+
+      /* map to CSS vars used by existing JS */
+      --color-background-primary:   var(--stone);
+      --color-background-secondary: var(--stone-mid);
+      --color-text-primary:         var(--sand-light);
+      --color-text-secondary:       var(--sand-dark);
+      --color-border-primary:       var(--gold);
+      --color-border-secondary:     var(--gold-dim);
+      --color-border-tertiary:      #3a2e20;
+      --font-sans:   'EB Garamond', Georgia, serif;
+      --font-mono:   'Fira Code', monospace;
+      --border-radius-md: 4px;
+      --border-radius-lg: 8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background: radial-gradient(ellipse 80% 60% at 50% 20%, #1c1408 0%, #0a0806 60%, #060504 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* ── Decorative border corners ── */
+    .app {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--gold-dim);
+      border-radius: 6px;
+      overflow: hidden;
+      min-height: 680px;
+      width: 100%;
+      max-width: 1200px;
+      background: var(--stone);
+      position: relative;
+      box-shadow: 0 0 60px rgba(212,168,67,0.08), 0 0 120px rgba(0,0,0,0.8), inset 0 0 40px rgba(0,0,0,0.4);
+    }
+    .app::before, .app::after {
+      content: '';
+      position: absolute;
+      width: 32px; height: 32px;
+      border-color: var(--gold);
+      border-style: solid;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .app::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; border-radius: 5px 0 0 0; }
+    .app::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; border-radius: 0 0 5px 0; }
+
+    /* ── Topbar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--color-border-tertiary);
+      background: linear-gradient(180deg, #251e16 0%, #1a1510 100%);
+      flex-wrap: wrap;
+      position: relative;
+    }
+    .topbar::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-dim), var(--gold), var(--gold-dim), transparent);
+    }
+    .topbar-title {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+      flex: 1;
+      min-width: 160px;
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 20px var(--glow-strong);
+    }
+    .topbar-title::before { content: '𓂀  '; font-family: "Segoe UI Historic","Noto Sans Egyptian Hieroglyphs",serif; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 6px 14px;
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      border-radius: 3px;
+      border: 1px solid var(--gold-dim);
+      background: transparent;
+      color: var(--sand);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .btn:hover {
+      border-color: var(--gold);
+      color: var(--gold-bright);
+      background: rgba(212,168,67,0.08);
+      box-shadow: 0 0 10px var(--glow);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #a07828, #c9a030, #a07828);
+      color: var(--obsidian);
+      border-color: var(--gold);
+      font-weight: 600;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #c09038, #e8b840, #c09038);
+      box-shadow: 0 0 16px var(--glow-strong);
+      color: var(--obsidian);
+    }
+
+    /* ── Main layout ── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      flex: 1;
+      min-height: 0;
+    }
+    .left { display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--color-border-tertiary);
+      background: var(--stone-mid);
+      gap: 0;
+    }
+    .tab {
+      padding: 10px 20px;
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--sand-dark);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+    .tab:hover { color: var(--sand); background: rgba(255,255,255,0.03); }
+    .tab.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+      background: rgba(212,168,67,0.06);
+    }
+    .tab-content { display: none; flex: 1; overflow-y: auto; flex-direction: column; }
+    .tab-content.active { display: flex; }
+
+    .lbl {
+      font-family: 'Cinzel', serif;
+      font-size: 9px;
+      color: var(--sand-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 600;
+    }
+
+    /* ── Font grid ── */
+    .font-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+      gap: 6px;
+      padding: 14px;
+      background: var(--stone);
+      position: relative;
+    }
+    .font-grid::before {
+      content: '𓂀 𓇳 𓋔 𓏋 𓈖 𓅱';
+      position: absolute;
+      bottom: 8px; right: 12px;
+      font-family: "Segoe UI Historic","Noto Sans Egyptian Hieroglyphs",serif;
+      font-size: 11px;
+      color: var(--gold-dim);
+      opacity: 0.18;
+      pointer-events: none;
+      letter-spacing: 4px;
+    }
+    .font-cell {
+      border: 1px solid #2e2318;
+      border-radius: 3px;
+      padding: 7px 4px 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      background: linear-gradient(180deg, #1e1810 0%, #17130c 100%);
+      transition: all 0.18s;
+    }
+    .font-cell:hover {
+      border-color: var(--gold-dim);
+      background: linear-gradient(180deg, #261e10 0%, #1e1810 100%);
+      box-shadow: 0 0 8px rgba(212,168,67,0.12);
+    }
+    .font-cell.selected {
+      border-color: var(--gold);
+      background: linear-gradient(180deg, #2e2210 0%, #241a0e 100%);
+      box-shadow: 0 0 12px var(--glow);
+    }
+    .font-cell.has-glyph { background: linear-gradient(180deg, #1e1a0e 0%, #181408 100%); border-color: #3a2e18; }
+    .cell-letter {
+      font-family: 'Cinzel', serif;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--sand-dark);
+      letter-spacing: 0.08em;
+    }
+    .font-cell.selected .cell-letter { color: var(--gold); }
+    .cell-preview { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; position: relative; overflow: visible; padding: 2px; }
+
+    /* ── Editor ── */
+    .editor {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-top: 1px solid var(--color-border-tertiary);
+      background: linear-gradient(180deg, #1a1510 0%, #16120e 100%);
+    }
+    .editor-header { display: flex; align-items: center; gap: 12px; }
+    .editor-letter-box {
+      width: 52px; height: 52px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 26px; font-weight: 700;
+      border: 1px solid var(--gold-dim);
+      border-radius: 3px;
+      background: linear-gradient(135deg, #251e12, #1a1509);
+      color: var(--gold);
+      text-shadow: 0 0 14px var(--glow-strong);
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.4);
+    }
+
+    .method-tabs { display: flex; gap: 6px; }
+    .mtab {
+      padding: 5px 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      border-radius: 2px;
+      border: 1px solid var(--color-border-tertiary);
+      background: transparent;
+      color: var(--sand-dark);
+      cursor: pointer;
+      transition: all 0.18s;
+      text-transform: uppercase;
+    }
+    .mtab:hover { border-color: var(--gold-dim); color: var(--sand); }
+    .mtab.active { border-color: var(--gold); color: var(--gold); background: rgba(212,168,67,0.08); }
+
+    /* ── Composition area ── */
+    .compose-area { display: flex; flex-direction: column; gap: 10px; }
+    .compose-slots {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      min-height: 60px; padding: 10px;
+      border: 1px solid #3a2e20;
+      border-radius: 3px;
+      background: var(--stone-mid);
+    }
+    .slot {
+      width: 50px; height: 50px;
+      border: 1px dashed var(--gold-dim);
+      border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      position: relative;
+      background: linear-gradient(135deg, #1e1810, #17130c);
+      transition: border-color 0.2s;
+    }
+    .slot:hover { border-color: var(--gold); }
+    .slot .rm {
+      position: absolute; top: -7px; right: -7px;
+      width: 16px; height: 16px;
+      background: var(--gold-dim);
+      color: var(--obsidian);
+      border-radius: 50%; font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; line-height: 1;
+      transition: background 0.15s;
+    }
+    .slot .rm:hover { background: var(--gold); }
+    .slot-add {
+      width: 50px; height: 50px;
+      border: 1px dashed #3a2e20;
+      border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--sand-dark); font-size: 20px; cursor: default;
+    }
+    .compose-preview { display: flex; flex-direction: column; gap: 6px; }
+    .preview-box {
+      width: 88px; height: 88px;
+      border: 1px solid var(--gold-dim);
+      border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #1e1810, #17130c);
+      overflow: visible; padding: 4px;
+      box-shadow: inset 0 0 16px rgba(0,0,0,0.5);
+    }
+
+    /* ── Gardiner picker ── */
+    .g-search {
+      width: 100%; padding: 7px 12px;
+      font-family: var(--font-sans); font-size: 13px;
+      border-radius: 3px;
+      border: 1px solid #3a2e20;
+      background: var(--stone-mid);
+      color: var(--sand);
+    }
+    .g-search::placeholder { color: var(--sand-dark); }
+    .g-search:focus { outline: none; border-color: var(--gold-dim); box-shadow: 0 0 8px var(--glow); }
+    .gardiner-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; max-height: 180px; overflow-y: auto; }
+    .gardiner-grid::-webkit-scrollbar { width: 5px; }
+    .gardiner-grid::-webkit-scrollbar-track { background: var(--stone); }
+    .gardiner-grid::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+    .g-item {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 6px 2px;
+      border: 1px solid transparent;
+      border-radius: 3px; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .g-item:hover { border-color: var(--gold-dim); background: rgba(212,168,67,0.06); }
+    .g-item.in-slot { border-color: var(--gold); background: rgba(212,168,67,0.1); }
+    .g-sym { font-size: 22px; line-height: 1; filter: drop-shadow(0 0 3px rgba(212,168,67,0.3)); }
+    .g-code { font-size: 8px; color: var(--sand-dark); font-family: var(--font-mono); }
+
+    /* ── Draw ── */
+    #drawCanvas { border: 1px solid #3a2e20; border-radius: 3px; cursor: crosshair; display: block; touch-action: none; background: #fff; }
+    .mode-switch {
+      display: flex; align-items: center; gap: 10px;
+      padding: 5px 12px;
+      border: 1px solid var(--gold-dim);
+      border-radius: 20px;
+      background: linear-gradient(135deg, #1e1810, #17130c);
+    }
+    .switch-label { font-family: 'Cinzel', serif; font-size: 10px; color: var(--sand-dark); letter-spacing: 0.06em; text-transform: uppercase; }
+    .switch {
+      position: relative; width: 44px; height: 24px;
+      border-radius: 12px; background: #3a2e20; cursor: pointer;
+      transition: background 0.2s; border: none; outline: none;
+    }
+    .switch::after {
+      content: ''; position: absolute; top: 4px; left: 4px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--sand-dark); transition: transform 0.2s, background 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .switch.on { background: var(--gold-dim); }
+    .switch.on::after { transform: translateX(20px); background: var(--gold); }
+    .mode-status { font-family: 'Cinzel', serif; font-size: 10px; color: var(--sand-dark); letter-spacing: 0.06em; }
+    .draw-panel { display: flex; flex-direction: column; gap: 10px; }
+    .draw-stage {
+      border: 1px solid #3a2e20;
+      border-radius: 3px;
+      background: var(--stone-mid);
+      padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .draw-preview-row { display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+    .draw-large-wrap { flex: 1; min-width: 260px; }
+    .draw-large-box {
+      width: 100%; min-height: 280px;
+      border: 1px solid #3a2e20; border-radius: 3px;
+      background: var(--stone); display: flex; align-items: center; justify-content: center; padding: 10px;
+    }
+    .draw-small-preview { width: 72px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+    .small-preview-box {
+      width: 72px; height: 72px;
+      border: 1px solid var(--gold-dim); border-radius: 3px;
+      background: linear-gradient(135deg, #1e1810, #17130c);
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+
+    .default-sign-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .default-sign-card {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid #3a2e20;
+      border-radius: 4px;
+      background: var(--stone-mid);
+      transition: all 0.18s;
+    }
+    .default-sign-card.active { border-color: var(--gold); background: rgba(212,168,67,0.06); }
+    .default-sign-symbol { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .default-sign-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .default-sign-head { font-family: var(--font-sans); font-size: 12px; color: var(--sand); font-weight: 500; line-height: 1.3; }
+    .default-sign-sub { font-size: 10px; color: var(--sand-dark); font-family: var(--font-mono); line-height: 1.35; }
+
+    /* ── Typeset ── */
+    .ts-inner { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .ts-textarea {
+      width: 100%; resize: none;
+      font-family: var(--font-sans); font-size: 15px;
+      padding: 10px 12px;
+      border-radius: 3px;
+      border: 1px solid #3a2e20;
+      background: var(--stone-mid);
+      color: var(--sand);
+      height: 68px;
+    }
+    .ts-textarea::placeholder { color: var(--sand-dark); }
+    .ts-textarea:focus { outline: none; border-color: var(--gold-dim); box-shadow: 0 0 8px var(--glow); }
+    .dir-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .dir-btn {
+      padding: 7px 4px;
+      font-family: 'Cinzel', serif; font-size: 10px;
+      letter-spacing: 0.06em;
+      border-radius: 3px;
+      border: 1px solid #3a2e20;
+      background: var(--stone-mid);
+      color: var(--sand-dark);
+      cursor: pointer; text-align: center;
+      transition: all 0.15s;
+      text-transform: uppercase;
+    }
+    .dir-btn:hover { border-color: var(--gold-dim); color: var(--sand); }
+    .dir-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(212,168,67,0.08); }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input[type=range] { flex: 1; accent-color: var(--gold); }
+    .sv { font-family: var(--font-mono); font-size: 11px; color: var(--sand-dark); min-width: 34px; text-align: right; }
+
+    /* ── Right panel ── */
+    .right {
+      border-left: 1px solid var(--color-border-tertiary);
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 14px;
+      background: linear-gradient(180deg, #17130c 0%, #130f0a 100%);
+      overflow-y: auto;
+    }
+    .right::-webkit-scrollbar { width: 5px; }
+    .right::-webkit-scrollbar-track { background: var(--stone); }
+    .right::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+    .canvas-box {
+      background: linear-gradient(135deg, #1a1510, #130f0a);
+      border: 1px solid #3a2e20;
+      border-radius: 4px;
+      min-height: 420px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 28px;
+      overflow: auto;
+      position: relative;
+    }
+    .canvas-box::before {
+      content: '';
+      position: absolute; inset: 6px;
+      border: 1px solid rgba(212,168,67,0.1);
+      border-radius: 2px;
+      pointer-events: none;
+    }
+
+    .share-box {
+      background: var(--stone-mid);
+      border: 1px solid #3a2e20;
+      border-radius: 4px;
+      padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .share-url {
+      font-size: 10px; font-family: var(--font-mono);
+      color: var(--sand-dark);
+      word-break: break-all;
+      background: var(--stone);
+      padding: 8px 10px; border-radius: 3px;
+      max-height: 52px; overflow-y: auto;
+      border: 1px solid #3a2e20;
+    }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, #a07828, #c9a030);
+      color: var(--obsidian);
+      padding: 8px 18px; border-radius: 3px;
+      font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 0.1em;
+      opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 999;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .toast.show { opacity: 1; }
+
+    .sec-title {
+      font-family: 'Cinzel', serif;
+      font-size: 11px; font-weight: 600;
+      color: var(--sand);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .empty-canvas {
+      font-family: var(--font-sans); font-size: 14px;
+      color: var(--sand-dark); text-align: center; line-height: 2;
+      font-style: italic;
+    }
+    .empty-canvas::before { content: '𓂀'; display: block; font-size: 32px; margin-bottom: 8px; font-family: "Segoe UI Historic","Noto Sans Egyptian Hieroglyphs",serif; opacity: 0.4; font-style: normal; }
+
+    /* scrollbars for left panel */
+    .tab-content::-webkit-scrollbar { width: 5px; }
+    .tab-content::-webkit-scrollbar-track { background: var(--stone); }
+    .tab-content::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+    /* Hieroglyph font stack */
+    .g-sym, .slot, .preview-box, .cell-preview, .compose-slots {
+      font-family: "Segoe UI Historic", "Noto Sans Egyptian Hieroglyphs", "Arial Unicode MS", serif;
+    }
+
+    /* Canvas rendering fix for dark mode */
+    canvas { image-rendering: pixelated; }
+
+    /* ── Entrance animation ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .app { animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) both; }
+
+    /* ── Grain texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.5;
+    }
+
+    /* ── Selected font cell highlight pulse ── */
+    @keyframes cellPulse {
+      0%,100% { box-shadow: 0 0 8px rgba(212,168,67,0.2); }
+      50%      { box-shadow: 0 0 16px rgba(212,168,67,0.45); }
+    }
+    .font-cell.selected { animation: cellPulse 2.4s ease-in-out infinite; }
+
+    /* ── Divider hieroglyph ── */
+    .topbar-divider {
+      font-family: "Segoe UI Historic","Noto Sans Egyptian Hieroglyphs",serif;
+      font-size: 16px;
+      color: var(--gold-dim);
+      opacity: 0.5;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* ── Progress bar ── */
+    .progress-bar-wrap {
+      height: 2px;
+      background: #2e2318;
+      border-radius: 1px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+      border-radius: 1px;
+      transition: width 0.4s cubic-bezier(0.22,1,0.36,1);
+      box-shadow: 0 0 6px var(--glow);
+    }
+
+    /* ── Tab content scrollbar ── */
+    .left { scrollbar-width: thin; scrollbar-color: var(--gold-dim) var(--stone); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <span class="topbar-title">Hieroglyph Font Designer</span>
+      <span class="topbar-divider">𓂀</span>
+      <div class="mode-switch">
+        <span class="switch-label" id="labelCustom" style="color:var(--gold);">Custom</span>
+        <button class="switch" id="modeSwitch" aria-pressed="false" title="Toggle between Custom and Default Gardiner mode"></button>
+        <span class="switch-label" id="labelDefault" style="color:var(--sand-dark);">Default</span>
+      </div>
+      <span class="topbar-divider">𓇳</span>
+      <button class="btn" id="resetBtn">Reset</button>
+      <button class="btn" id="shareBtn">Share ↗</button>
+      <button class="btn btn-primary" id="loadUrlBtn">Load Font</button>
+    </div>
+
+    <div class="main">
+      <div class="left">
+        <div class="tabs">
+          <div class="tab active" data-tab="designer">Font Designer</div>
+          <div class="tab" data-tab="typeset">Typeset</div>
+        </div>
+
+        <div class="tab-content active" id="tab-designer">
+          <div class="font-grid" id="fontGrid"></div>
+
+          <div class="editor" id="editorPanel">
+            <div class="editor-header">
+              <div class="editor-letter-box" id="editorLetter">A</div>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-family:'Cinzel',serif;letter-spacing:0.06em;color:var(--sand);">Assign glyph to <span id="editorLetterName" style="color:var(--gold);">A</span></div>
+                <div style="font-size:11px;font-style:italic;color:var(--sand-dark);margin-top:3px;" id="editorHint">Custom mode — compose glyphs or draw freely.</div>
+              </div>
+              <button class="btn" id="clearGlyphBtn" style="font-size:11px;padding:4px 9px;">Clear</button>
+            </div>
+
+            <div class="method-tabs" id="customMethodTabs">
+              <button class="mtab active" data-method="compose">Compose glyphs</button>
+              <button class="mtab" data-method="draw">Draw</button>
+            </div>
+
+            <div id="defaultModePanel" style="display:none;flex-direction:column;gap:10px;">
+              <div style="font-size:11px;color:var(--color-text-secondary);">Default mode uses the fixed Gardiner-based mapping for each latin letter.</div>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);">
+                <div style="width:84px;height:84px;border:1px solid var(--gold-dim);border-radius:3px;background:linear-gradient(135deg,#1e1810,#17130c);display:flex;align-items:center;justify-content:center;overflow:visible;padding:4px;" id="defaultGlyphPreview"></div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <div style="font-size:12px;font-weight:500;color:var(--color-text-primary);">Default glyph for <span id="defaultGlyphLetter">A</span></div>
+                  <div style="font-size:11px;color:var(--color-text-secondary);" id="defaultGlyphCode">G1</div>
+                  <div style="font-size:11px;color:var(--color-text-secondary);" id="defaultGlyphName">Egyptian vulture</div>
+                  <div style="font-size:11px;color:var(--color-text-secondary);" id="defaultGlyphTransliteration">ꜣ (aleph)</div>
+                </div>
+              </div>
+              <div class="lbl">Gardiner sign list (uniliteral 24)</div>
+              <div class="default-sign-grid" id="defaultSignGrid"></div>
+            </div>
+
+            <div id="method-compose">
+              <div class="compose-area">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <div style="flex:1;">
+                    <div class="lbl" style="margin-bottom:5px;">Selected glyphs (click to add →)</div>
+                    <div class="compose-slots" id="composeSlots">
+                      <span style="font-size:11px;color:var(--color-text-secondary);">Click glyphs below to add</span>
+                    </div>
+                  </div>
+                  <div class="compose-preview">
+                    <div class="lbl" style="margin-bottom:4px;text-align:center;">Preview</div>
+                    <div class="preview-box" id="composePreview"><span style="color:var(--color-text-secondary);font-size:11px;">—</span></div>
+                    <button class="btn btn-primary" id="saveComposeBtn" style="margin-top:5px;font-size:11px;padding:4px 8px;width:72px;">Save</button>
+                  </div>
+                </div>
+                <input class="g-search" id="gSearch" placeholder="Search glyph code or name..." type="text">
+                <div class="gardiner-grid" id="gardinerGrid"></div>
+              </div>
+            </div>
+
+            <div id="method-draw" style="display:none;flex-direction:column;gap:8px;">
+              <div class="draw-panel">
+                <div style="font-size:11px;color:var(--color-text-secondary);">Draw large below. It will still be normalized into the final 48×48 glyph cell when saved.</div>
+                <div class="draw-stage">
+                  <div class="draw-preview-row">
+                    <div class="draw-large-wrap">
+                      <div class="lbl" style="margin-bottom:6px;">Drawing canvas</div>
+                      <div class="draw-large-box">
+                        <canvas id="drawCanvas" width="320" height="320" style="width:320px;height:320px;"></canvas>
+                      </div>
+                    </div>
+                    <div class="draw-small-preview">
+                      <div class="lbl" style="text-align:center;">48×48 preview</div>
+                      <div class="small-preview-box" id="drawMiniPreview"><span style="font-size:11px;color:var(--color-text-secondary);">—</span></div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <span style="font-size:11px;color:var(--color-text-secondary);">Brush</span>
+                    <input type="range" id="brushSize" min="2" max="18" value="6" step="1" style="width:120px;">
+                    <button class="btn" id="clearDrawBtn" style="font-size:11px;padding:4px 9px;">Clear</button>
+                    <button class="btn btn-primary" id="saveDrawBtn" style="font-size:11px;padding:4px 9px;">Save drawing</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-typeset">
+          <div class="ts-inner">
+            <div>
+              <span class="lbl" style="margin-bottom:5px;display:block;">Input text</span>
+              <textarea class="ts-textarea" id="tsInput" placeholder="Type to typeset...">HELLO WORLD</textarea>
+            </div>
+            <div>
+              <span class="lbl" style="margin-bottom:5px;display:block;">Direction</span>
+              <div class="dir-btns">
+                <button class="dir-btn active" data-dir="ltr">L → R</button>
+                <button class="dir-btn" data-dir="rtl">R → L</button>
+                <button class="dir-btn" data-dir="ttb">T ↓ B</button>
+              </div>
+            </div>
+            <div><span class="lbl">Tracking</span>
+              <div class="slider-row"><input type="range" id="tracking" min="0" max="48" value="8" step="1"><span class="sv" id="trackingVal">8px</span></div>
+            </div>
+            <div><span class="lbl">Leading</span>
+              <div class="slider-row"><input type="range" id="leading" min="32" max="120" value="56" step="1"><span class="sv" id="leadingVal">56px</span></div>
+            </div>
+            <div><span class="lbl">Glyph size</span>
+              <div class="slider-row"><input type="range" id="glyphSize" min="20" max="80" value="40" step="1"><span class="sv" id="glyphSizeVal">40px</span></div>
+            </div>
+            <button class="btn" id="copyGlyphs">Copy as text</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid #2e2318;">
+          <span class="sec-title" style="display:flex;align-items:center;gap:8px;">
+            <span style="font-family:'Segoe UI Historic','Noto Sans Egyptian Hieroglyphs',serif;font-size:16px;color:var(--gold);opacity:0.7;">𓇳</span>
+            Inscription Preview
+          </span>
+          <span style="font-family:'Fira Code',monospace;font-size:10px;color:var(--gold-dim);background:#1e1810;padding:3px 8px;border-radius:2px;border:1px solid #3a2e20;" id="progressLabel">0 / 26</span>
+        </div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBarFill" style="width:0%"></div></div>
+        <div class="canvas-box" id="renderCanvas">
+          <div class="empty-canvas">Assign glyphs to letters<br>then go to Typeset tab</div>
+        </div>
+        <div class="share-box">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <span style="font-family:'Segoe UI Historic','Noto Sans Egyptian Hieroglyphs',serif;font-size:13px;color:var(--gold-dim);">𓏋</span>
+            <span class="lbl">Shareable Cartouche</span>
+          </div>
+          <div class="share-url" id="shareUrl">Assign glyphs to generate link.</div>
+          <button class="btn" id="copyLinkBtn">Copy link</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const CELL_SIZE = 48;
+
+    const GARDINER_LIST = [
+      {sym:'𓄿',code:'G1',name:'vulture'},{sym:'𓅀',code:'G2',name:'vulture+stroke'},{sym:'𓅁',code:'G3',name:'vulture+quail'},{sym:'𓅂',code:'G4',name:'buzzard'},
+      {sym:'𓅃',code:'G5',name:'falcon'},{sym:'𓅄',code:'G6',name:'falcon+flag'},{sym:'𓅅',code:'G7',name:'falcon+sun'},{sym:'𓅆',code:'G8',name:'falcon+basket'},
+      {sym:'𓅇',code:'G9',name:'falcon+cobra'},{sym:'𓅈',code:'G10',name:'falcon on standard'},{sym:'𓅉',code:'G11',name:'falcon+feather'},{sym:'𓅊',code:'G12',name:'sacred falcon'},
+      {sym:'𓅋',code:'G13',name:'falcon+sun+cobra'},{sym:'𓅌',code:'G14',name:'vulture with flail'},{sym:'𓅍',code:'G15',name:'vulture with feather'},{sym:'𓅎',code:'G16',name:'two falcons'},
+      {sym:'𓅓',code:'G17',name:'owl'},{sym:'𓅔',code:'G18',name:'two owls'},{sym:'𓅱',code:'G43',name:'quail chick'},{sym:'𓅲',code:'G44',name:'two quail chicks'},
+      {sym:'𓆑',code:'I9',name:'horned viper'},{sym:'𓆓',code:'I10',name:'cobra'},{sym:'𓆗',code:'I13',name:'cobra+basket'},{sym:'𓆙',code:'I14',name:'snake'},
+      {sym:'𓃀',code:'D58',name:'foot'},{sym:'𓂧',code:'D46',name:'hand'},{sym:'𓂋',code:'D21',name:'mouth'},{sym:'𓂝',code:'D36',name:'arm'},
+      {sym:'𓈖',code:'N35',name:'water'},{sym:'𓈗',code:'N36',name:'canal'},{sym:'𓎡',code:'V31',name:'basket'},{sym:'𓎼',code:'V33',name:'bag'},
+      {sym:'𓋴',code:'S29',name:'cloth'},{sym:'𓏏',code:'X1',name:'bread'},{sym:'𓊃',code:'Z7',name:'bolt'},{sym:'𓇋',code:'M17',name:'reed'},
+      {sym:'𓇌',code:'M17+',name:'two reeds'},{sym:'𓉔',code:'O4',name:'shelter'},{sym:'𓊪',code:'Q3',name:'stool'},{sym:'𓈎',code:'N29',name:'hill slope'},
+      {sym:'𓃭',code:'F22',name:'lion'},{sym:'𓏛',code:'Y1',name:'papyrus'},{sym:'𓂻',code:'D54',name:'legs walking'},{sym:'𓀀',code:'A1',name:'seated man'},
+      {sym:'𓀁',code:'A2',name:'man with hand to mouth'},{sym:'𓀃',code:'A4',name:'man with hand up'},{sym:'𓀆',code:'A7',name:'man with jar'},{sym:'𓀗',code:'A24',name:'man striking'},
+      {sym:'𓁐',code:'B1',name:'seated woman'},{sym:'𓁢',code:'C1',name:'man with sun'},{sym:'𓁹',code:'D4',name:'eye'},{sym:'𓂀',code:'D10',name:'eye of horus'},
+      {sym:'𓂃',code:'D13',name:'eyebrow'},{sym:'𓂉',code:'D48',name:'palm'},{sym:'𓂓',code:'D28',name:'arms raised'},{sym:'𓃒',code:'E1',name:'bull'},
+      {sym:'𓃗',code:'E6',name:'horse'},{sym:'𓃙',code:'E8',name:'calf'},{sym:'𓃟',code:'E14',name:'dog'},{sym:'𓃠',code:'E15',name:'lying dog'},
+      {sym:'𓄂',code:'E28',name:'giraffe'},{sym:'𓄃',code:'E29',name:'donkey'},{sym:'𓄔',code:'F12',name:'neck of animal'},{sym:'𓄖',code:'F13',name:'horns'},
+      {sym:'𓄡',code:'F29',name:'animal belly'},{sym:'𓄣',code:'F31',name:'hides'},{sym:'𓄤',code:'F32',name:'belly'},{sym:'𓄧',code:'F35',name:'necklace'},
+      {sym:'𓆈',code:'I3',name:'crocodile'},{sym:'𓆏',code:'I8',name:'frog'},{sym:'𓆐',code:'I8a',name:'tadpole'},{sym:'𓇂',code:'L2',name:'bee'},
+      {sym:'𓇆',code:'M4',name:'palm branch'},{sym:'𓇈',code:'M6',name:'shoot'},{sym:'𓇍',code:'M18',name:'reed+water'},{sym:'𓇎',code:'M19',name:'baskets on pole'},
+      {sym:'𓇗',code:'M26',name:'flowering sedge'},{sym:'𓇙',code:'M28',name:'sedge'},{sym:'𓇛',code:'M29',name:'pod'},{sym:'𓇟',code:'M33',name:'grain'},
+      {sym:'𓇠',code:'M34',name:'grain+stroke'},{sym:'𓇢',code:'M36',name:'flax'},{sym:'𓇤',code:'M38',name:'bundle'},{sym:'𓇥',code:'M39',name:'basket of figs'},
+      {sym:'𓉐',code:'O1',name:'house'},{sym:'𓉑',code:'O2',name:'house+stroke'},{sym:'𓉗',code:'O6',name:'enclosure'},{sym:'𓉘',code:'O7',name:'wall'},
+      {sym:'𓊀',code:'O29',name:'wooden column'},{sym:'𓊁',code:'O30',name:'supporting poles'},{sym:'𓊃',code:'Z7',name:'bolt'},{sym:'𓊋',code:'P1',name:'boat'},
+      {sym:'𓊌',code:'P2',name:'boat+sail'},{sym:'𓊍',code:'P3',name:'sacred bark'},{sym:'𓊏',code:'P5',name:'sail'},{sym:'𓊐',code:'P6',name:'mast'},
+      {sym:'𓋀',code:'S1',name:'double crown'},{sym:'𓋁',code:'S2',name:'red crown'},{sym:'𓋃',code:'S3',name:'white crown'},{sym:'𓋇',code:'S5',name:'double crown+cobra'},
+      {sym:'𓋉',code:'S6',name:'atef crown'},{sym:'𓋍',code:'S8',name:'atef+horns'},{sym:'𓋏',code:'S9',name:'feathered crown'},{sym:'𓋔',code:'S12',name:'collar'},
+      {sym:'𓌀',code:'T3',name:'mace'},{sym:'𓌁',code:'T4',name:'mace+stroke'},{sym:'𓌃',code:'T7',name:'axe'},{sym:'𓌅',code:'T9',name:'bow'},
+      {sym:'𓌇',code:'T10',name:'arrow'},{sym:'𓌈',code:'T11',name:'two arrows'},{sym:'𓌉',code:'T12',name:'quiver'},{sym:'𓌋',code:'T14',name:'throw stick'},
+      {sym:'𓎛',code:'U1',name:'sickle'},{sym:'𓎜',code:'U2',name:'sickle+stroke'},{sym:'𓎟',code:'U5',name:'hoe'},{sym:'𓎠',code:'U6',name:'hoe+stroke'},
+      {sym:'𓎣',code:'U9',name:'grain measure'},{sym:'𓎤',code:'U10',name:'grain measure+stroke'},{sym:'𓎧',code:'U13',name:'plow'},{sym:'𓎩',code:'U15',name:'sledge'},
+      {sym:'𓏀',code:'V1',name:'coil of rope'},{sym:'𓏁',code:'V2',name:'coil+stroke'},{sym:'𓏃',code:'V4',name:'lasso'},{sym:'𓏄',code:'V5',name:'lasso+stroke'},
+      {sym:'𓏇',code:'V7',name:'ring'},{sym:'𓏈',code:'V8',name:'cartouche'},{sym:'𓏉',code:'V9',name:'shen ring'},{sym:'𓏋',code:'V11',name:'cartouche outline'},
+      {sym:'𓐍',code:'W1',name:'oil jar'},{sym:'𓐎',code:'W2',name:'oil jar+stroke'},{sym:'𓐏',code:'W3',name:'alabaster basin'},{sym:'𓐔',code:'W9',name:'stone jug'},
+      {sym:'𓐕',code:'W10',name:'cup'},{sym:'𓐖',code:'W11',name:'stand for jars'},{sym:'𓐗',code:'W12',name:'pot'},{sym:'𓐘',code:'W13',name:'milk jug'},
+      {sym:'𓑀',code:'X2',name:'bread cone'},{sym:'𓑁',code:'X3',name:'bread roll'},{sym:'𓑃',code:'X5',name:'pita bread'},{sym:'𓑄',code:'X6',name:'round loaf'},
+      {sym:'𓇯',code:'N1',name:'sky'},{sym:'𓇰',code:'N2',name:'sky+scepter'},{sym:'𓇳',code:'N5',name:'sun'},{sym:'𓇴',code:'N6',name:'sun+uraeus'},
+      {sym:'𓇵',code:'N7',name:'sun+stroke'},{sym:'𓇶',code:'N8',name:'sunshine'},{sym:'𓇷',code:'N9',name:'moon'},{sym:'𓇸',code:'N10',name:'crescent'},
+      {sym:'𓇹',code:'N11',name:'crescent+stroke'},{sym:'𓇼',code:'N14',name:'star'},{sym:'𓇽',code:'N15',name:'star in circle'},{sym:'𓈀',code:'N17',name:'flat land'},
+      {sym:'𓈁',code:'N18',name:'sandy tract'},{sym:'𓈃',code:'N20',name:'tongue of land'},{sym:'𓈄',code:'N21',name:'land+stroke'},{sym:'𓈅',code:'N22',name:'land+two strokes'},
+    ];
+
+    let font = {};
+    let selectedLetter = 'A';
+    let currentMethod = 'compose';
+    let tsDirection = 'ltr';
+    let compositionSlots = [];
+    let isDrawing = false;
+    let drawCtx = null;
+    let useDefaultMapping = false;
+
+    const DEFAULT_GARDINER_MAP = {
+      A:{sym:'𓄿', code:'G1', name:'Egyptian vulture', transliteration:'ꜣ (aleph)'},
+      B:{sym:'𓃀', code:'D58', name:'Foot', transliteration:'b'},
+      C:{sym:'𓎡', code:'V31', name:'Basket with handle', transliteration:'k'},
+      D:{sym:'𓂧', code:'D46', name:'Hand', transliteration:'d'},
+      E:{sym:'𓇋', code:'M17', name:'Reed', transliteration:'y (vowel → y)'},
+      F:{sym:'𓆑', code:'I9', name:'Horned viper', transliteration:'f'},
+      G:{sym:'𓎼', code:'V33', name:'Bag', transliteration:'g (approx.)'},
+      H:{sym:'𓉔', code:'O4', name:'Shelter', transliteration:'ḥ'},
+      I:{sym:'𓇋', code:'M17', name:'Reed', transliteration:'y (vowel → y)'},
+      J:{sym:'𓆓', code:'I10', name:'Cobra', transliteration:'ḏ'},
+      K:{sym:'𓎡', code:'V31', name:'Basket with handle', transliteration:'k'},
+      L:{sym:'𓃭', code:'F22', name:'Lion', transliteration:'r (approx.)'},
+      M:{sym:'𓅓', code:'G17', name:'Owl', transliteration:'m'},
+      N:{sym:'𓈖', code:'N35', name:'Water', transliteration:'n'},
+      O:{sym:'𓅱', code:'G43', name:'Quail chick', transliteration:'w (vowel → w)'},
+      P:{sym:'𓊪', code:'Q3', name:'Stool', transliteration:'p'},
+      Q:{sym:'𓈎', code:'N29', name:'Hill slope', transliteration:'q'},
+      R:{sym:'𓂋', code:'D21', name:'Mouth', transliteration:'r'},
+      S:{sym:'𓋴', code:'S29', name:'Folded cloth', transliteration:'s'},
+      T:{sym:'𓏏', code:'X1', name:'Bread loaf', transliteration:'t'},
+      U:{sym:'𓅱', code:'G43', name:'Quail chick', transliteration:'w (vowel → w)'},
+      V:{sym:'𓆑', code:'I9', name:'Horned viper', transliteration:'f (approx.)'},
+      W:{sym:'𓅱', code:'G43', name:'Quail chick', transliteration:'w'},
+      X:{sym:'𓎸', code:'V28', name:'Wick', transliteration:'ḫ (approx.)'},
+      Y:{sym:'𓇌', code:'M17+', name:'Two reeds', transliteration:'y'},
+      Z:{sym:'𓊃', code:'Z7', name:'Door bolt', transliteration:'z / s'}
+    };
+
+    function getEffectiveGlyph(letter) {
+      if (useDefaultMapping && DEFAULT_GARDINER_MAP[letter]) {
+        return { type:'compose', glyphs:[DEFAULT_GARDINER_MAP[letter].sym], source:'default' };
+      }
+      return font[letter] || null;
+    }
+
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    function getHieroglyphFontStack(fontSize) {
+      return `${fontSize}px "Segoe UI Historic", "Noto Sans Egyptian Hieroglyphs", "Arial Unicode MS", serif`;
+    }
+
+    function renderGlyphToCanvas(glyphData, targetCanvas, size) {
+      const ctx = targetCanvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+      if (!glyphData) return;
+
+      const inset = Math.max(3, Math.round(size * 0.14));
+      const drawSize = size - inset * 2;
+
+      if (glyphData.type === 'draw' && glyphData.dataUrl) {
+        const img = new Image();
+        img.onload = () => { ctx.drawImage(img, inset, inset, drawSize, drawSize); };
+        img.src = glyphData.dataUrl;
+      } else if (glyphData.type === 'compose' && glyphData.glyphs && glyphData.glyphs.length > 0) {
+        const n = glyphData.glyphs.length;
+        const slotW = drawSize / n;
+
+        // Make default single-sign glyphs substantially larger but leave more margin
+        const fontSize =
+          n === 1 ? Math.round(drawSize * 0.96) :
+          n === 2 ? Math.round(drawSize * 0.64) :
+                    Math.round(drawSize * 0.50);
+
+        ctx.font = getHieroglyphFontStack(fontSize);
+        ctx.fillStyle = '#c9a96e';
+        ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = 'center';
+        glyphData.glyphs.forEach((sym, i) => {
+          // Measure actual glyph bounds and fit it inside each slot with extra safety margin
+          const metrics = ctx.measureText(sym);
+          const left = metrics.actualBoundingBoxLeft || fontSize * 0.12;
+          const right = metrics.actualBoundingBoxRight || fontSize * 0.12;
+          const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.55;
+          const descent = metrics.actualBoundingBoxDescent || fontSize * 0.22;
+          const boxW = left + right;
+          const boxH = ascent + descent;
+
+          const availW = slotW * 0.88;
+          const availH = drawSize * 0.84;
+          const scale = Math.min(
+            1,
+            availW / Math.max(boxW, 1),
+            availH / Math.max(boxH, 1)
+          );
+
+          const cx = inset + slotW * i + slotW / 2;
+          const cy = inset + drawSize / 2;
+
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.scale(scale, scale);
+          ctx.fillText(sym, (left - right) / 2, (ascent - descent) / 2);
+          ctx.restore();
+        });
+      }
+    }
+
+    function makeGlyphElement(glyphData, size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      canvas.style.width = size + 'px';
+      canvas.style.height = size + 'px';
+      renderGlyphToCanvas(glyphData, canvas, size);
+      return canvas;
+    }
+
+    function buildFontGrid() {
+      const grid = document.getElementById('fontGrid');
+      grid.innerHTML = '';
+      LETTERS.forEach(l => {
+        const cell = document.createElement('div');
+        const effectiveGlyph = getEffectiveGlyph(l);
+        const has = !!effectiveGlyph;
+        const isCustom = !!font[l];
+        cell.className = 'font-cell' + (has ? ' has-glyph' : '') + (l === selectedLetter ? ' selected' : '');
+        const preview = document.createElement('div');
+        preview.className = 'cell-preview';
+        if (has) {
+          const c = makeGlyphElement(effectiveGlyph, useDefaultMapping ? 38 : 36);
+          if (useDefaultMapping && !isCustom) preview.title = 'Default Gardiner glyph';
+          preview.appendChild(c);
+        } else {
+          preview.innerHTML = '<span style="font-size:18px;color:var(--color-border-secondary);">+</span>';
+        }
+        cell.innerHTML = `<span class="cell-letter">${l}</span>`;
+        cell.appendChild(preview);
+        cell.onclick = () => { selectedLetter = l; buildFontGrid(); updateEditor(); };
+        grid.appendChild(cell);
+      });
+    }
+
+    function updateProgress() {
+      const n = Object.keys(font).filter(k => font[k]).length;
+      document.getElementById('progressLabel').textContent = n + ' / 26';
+      const bar = document.getElementById('progressBarFill');
+      if (bar) bar.style.width = Math.round((n/26)*100) + '%';
+      document.getElementById('modeSwitch').classList.toggle('on', useDefaultMapping);
+      document.getElementById('modeSwitch').setAttribute('aria-pressed', useDefaultMapping ? 'true' : 'false');
+      // Highlight whichever mode is active
+      const lCustom = document.getElementById('labelCustom');
+      const lDefault = document.getElementById('labelDefault');
+      if (lCustom) lCustom.style.color = useDefaultMapping ? 'var(--sand-dark)' : 'var(--gold)';
+      if (lDefault) lDefault.style.color = useDefaultMapping ? 'var(--gold)' : 'var(--sand-dark)';
+    }
+    function updateEditorModeUI() {
+      const customTabs = document.getElementById('customMethodTabs');
+      const composePanel = document.getElementById('method-compose');
+      const drawPanel = document.getElementById('method-draw');
+      const defaultPanel = document.getElementById('defaultModePanel');
+      const clearBtn = document.getElementById('clearGlyphBtn');
+
+      if (useDefaultMapping) {
+        customTabs.style.display = 'none';
+        composePanel.style.display = 'none';
+        drawPanel.style.display = 'none';
+        defaultPanel.style.display = 'flex';
+        clearBtn.style.display = 'none';
+        const hint = document.getElementById('editorHint');
+        if (hint) hint.textContent = 'Default mode — fixed Gardiner mapping for each letter.';
+
+        const meta = DEFAULT_GARDINER_MAP[selectedLetter];
+        document.getElementById('defaultGlyphLetter').textContent = selectedLetter;
+        document.getElementById('defaultGlyphCode').textContent = meta ? meta.code : '—';
+        document.getElementById('defaultGlyphName').textContent = meta ? meta.name : '—';
+        document.getElementById('defaultGlyphTransliteration').textContent = meta ? meta.transliteration : '—';
+        const preview = document.getElementById('defaultGlyphPreview');
+        preview.innerHTML = '';
+        if (meta) {
+          preview.appendChild(makeGlyphElement({type:'compose', glyphs:[meta.sym]}, 72));
+        } else {
+          preview.innerHTML = '<span style="font-size:11px;color:var(--color-text-secondary);">—</span>';
+        }
+      } else {
+        customTabs.style.display = 'flex';
+        defaultPanel.style.display = 'none';
+        clearBtn.style.display = 'inline-flex';
+        composePanel.style.display = currentMethod === 'compose' ? 'block' : 'none';
+        drawPanel.style.display = currentMethod === 'draw' ? 'flex' : 'none';
+        const hint = document.getElementById('editorHint');
+        if (hint) hint.textContent = 'Custom mode — compose glyphs or draw freely.';
+      }
+      buildDefaultSignGrid();
+    }
+
+
+    function updateEditor() {
+      document.getElementById('editorLetter').textContent = selectedLetter;
+      document.getElementById('editorLetterName').textContent = selectedLetter;
+
+      if (!useDefaultMapping && currentMethod === 'compose') {
+        const cur = font[selectedLetter];
+        compositionSlots = (cur && cur.type === 'compose') ? [...cur.glyphs] : [];
+        renderSlots();
+        updateGardinerHighlights();
+        updateComposePreview();
+      }
+      if (!useDefaultMapping && currentMethod === 'draw') restoreDrawing();
+
+      updateEditorModeUI();
+    }
+
+    function renderSlots() {
+      const el = document.getElementById('composeSlots');
+      el.innerHTML = '';
+      if (compositionSlots.length === 0) {
+        el.innerHTML = '<span style="font-size:11px;color:var(--color-text-secondary);">Click glyphs below to add</span>';
+        return;
+      }
+      compositionSlots.forEach((sym, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        slot.style.fontSize = '26px';
+        slot.textContent = sym;
+        const rm = document.createElement('span');
+        rm.className = 'rm';
+        rm.textContent = '×';
+        rm.onclick = (e) => {
+          e.stopPropagation();
+          compositionSlots.splice(i, 1);
+          renderSlots();
+          updateGardinerHighlights();
+          updateComposePreview();
+        };
+        slot.appendChild(rm);
+        el.appendChild(slot);
+      });
+      if (compositionSlots.length < 4) {
+        const add = document.createElement('div');
+        add.className = 'slot-add';
+        add.textContent = '+';
+        el.appendChild(add);
+      }
+    }
+
+    function updateComposePreview() {
+      const preview = document.getElementById('composePreview');
+      preview.innerHTML = '';
+      if (compositionSlots.length === 0) {
+        preview.innerHTML = '<span style="color:var(--color-text-secondary);font-size:11px;">—</span>';
+        return;
+      }
+      const tempFont = { type: 'compose', glyphs: compositionSlots };
+      const c = makeGlyphElement(tempFont, 64);
+      preview.appendChild(c);
+    }
+
+    document.getElementById('saveComposeBtn').onclick = () => {
+      if (compositionSlots.length === 0) {
+        toast('Add at least one glyph');
+        return;
+      }
+      font[selectedLetter] = { type: 'compose', glyphs: [...compositionSlots] };
+      buildFontGrid();
+      updateProgress();
+      updateShareUrl();
+      renderTypeset();
+      toast(selectedLetter + ' saved!');
+    };
+
+    function buildGardinerGrid(filter) {
+      const grid = document.getElementById('gardinerGrid');
+      grid.innerHTML = '';
+      const list = filter
+        ? GARDINER_LIST.filter(g => g.code.toLowerCase().includes(filter) || g.name.toLowerCase().includes(filter))
+        : GARDINER_LIST;
+
+      list.forEach(g => {
+        const item = document.createElement('div');
+        item.className = 'g-item' + (compositionSlots.includes(g.sym) ? ' in-slot' : '');
+        item.dataset.sym = g.sym;
+        item.innerHTML = `<span class="g-sym">${g.sym}</span><span class="g-code">${g.code}</span>`;
+        item.title = g.name;
+        item.onclick = () => {
+          if (compositionSlots.includes(g.sym)) {
+            const idx = compositionSlots.indexOf(g.sym);
+            compositionSlots.splice(idx, 1);
+          } else {
+            if (compositionSlots.length >= 4) {
+              toast('Max 4 glyphs per slot');
+              return;
+            }
+            compositionSlots.push(g.sym);
+          }
+          renderSlots();
+          updateGardinerHighlights();
+          updateComposePreview();
+        };
+        grid.appendChild(item);
+      });
+    }
+
+    function updateGardinerHighlights() {
+      document.querySelectorAll('.g-item').forEach(el => {
+        el.classList.toggle('in-slot', compositionSlots.includes(el.dataset.sym));
+      });
+    }
+
+    document.getElementById('gSearch').addEventListener('input', e => {
+      buildGardinerGrid(e.target.value.toLowerCase().trim() || null);
+    });
+
+    function initDrawCanvas() {
+      const canvas = document.getElementById('drawCanvas');
+      drawCtx = canvas.getContext('2d');
+      drawCtx.lineJoin = 'round';
+      drawCtx.lineCap = 'round';
+      clearDrawCanvas();
+
+      const pos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / r.width;
+        const scaleY = canvas.height / r.height;
+        const src = e.touches ? e.touches[0] : e;
+        return { x: (src.clientX - r.left) * scaleX, y: (src.clientY - r.top) * scaleY };
+      };
+
+      canvas.onmousedown = e => {
+        isDrawing = true;
+        drawCtx.beginPath();
+        const p = pos(e);
+        drawCtx.moveTo(p.x, p.y);
+      };
+      canvas.onmousemove = e => {
+        if (!isDrawing) return;
+        const p = pos(e);
+        drawCtx.strokeStyle = '#1a1510';
+        drawCtx.lineWidth = parseInt(document.getElementById('brushSize').value) * 2;
+        drawCtx.lineTo(p.x, p.y);
+        drawCtx.stroke();
+        updateDrawMiniPreview();
+      };
+      canvas.onmouseup = canvas.onmouseleave = () => { isDrawing = false; };
+      canvas.ontouchstart = e => {
+        e.preventDefault();
+        isDrawing = true;
+        drawCtx.beginPath();
+        const p = pos(e);
+        drawCtx.moveTo(p.x, p.y);
+      };
+      canvas.ontouchmove = e => {
+        e.preventDefault();
+        if (!isDrawing) return;
+        const p = pos(e);
+        drawCtx.strokeStyle = '#1a1510';
+        drawCtx.lineWidth = parseInt(document.getElementById('brushSize').value) * 2;
+        drawCtx.lineTo(p.x, p.y);
+        drawCtx.stroke();
+        updateDrawMiniPreview();
+      };
+      canvas.ontouchend = () => { isDrawing = false; };
+    }
+
+    function clearDrawCanvas() {
+      if (!drawCtx) return;
+      const canvas = document.getElementById('drawCanvas');
+      drawCtx.clearRect(0, 0, canvas.width, canvas.height);
+      drawCtx.fillStyle = '#ffffff';
+      drawCtx.fillRect(0, 0, canvas.width, canvas.height);
+      updateDrawMiniPreview();
+    }
+
+    function updateDrawMiniPreview() {
+      const box = document.getElementById('drawMiniPreview');
+      if (!box) return;
+      const canvas = document.getElementById('drawCanvas');
+      if (!canvas) return;
+      box.innerHTML = '';
+      const mini = document.createElement('canvas');
+      mini.width = CELL_SIZE;
+      mini.height = CELL_SIZE;
+      mini.style.width = '48px';
+      mini.style.height = '48px';
+      const mCtx = mini.getContext('2d');
+      mCtx.drawImage(canvas, 0, 0, CELL_SIZE, CELL_SIZE);
+      // Remove white background for preview
+      const imgData = mCtx.getImageData(0, 0, CELL_SIZE, CELL_SIZE);
+      const d = imgData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] > 200 && d[i+1] > 200 && d[i+2] > 200) d[i+3] = 0;
+        else {
+          const t = 1 - (d[i]+d[i+1]+d[i+2]) / (3*255);
+          d[i]=Math.round(201*t); d[i+1]=Math.round(169*t); d[i+2]=Math.round(110*t); d[i+3]=Math.round(255*t);
+        }
+      }
+      mCtx.putImageData(imgData, 0, 0);
+      box.appendChild(mini);
+    }
+
+    function restoreDrawing() {
+      const cur = font[selectedLetter];
+      if (cur && cur.type === 'draw' && cur.dataUrl) {
+        const img = new Image();
+        img.onload = () => {
+          clearDrawCanvas();
+          drawCtx.drawImage(img, 0, 0, 320, 320);
+          updateDrawMiniPreview();
+        };
+        img.src = cur.dataUrl;
+      } else {
+        clearDrawCanvas();
+      }
+    }
+
+    document.getElementById('clearDrawBtn').onclick = clearDrawCanvas;
+    document.getElementById('saveDrawBtn').onclick = () => {
+      const canvas = document.getElementById('drawCanvas');
+      // Normalize to CELL_SIZE
+      const norm = document.createElement('canvas');
+      norm.width = CELL_SIZE;
+      norm.height = CELL_SIZE;
+      const normCtx = norm.getContext('2d');
+      normCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, CELL_SIZE, CELL_SIZE);
+
+      // Remove white background — make near-white pixels transparent
+      const imgData = normCtx.getImageData(0, 0, CELL_SIZE, CELL_SIZE);
+      const d = imgData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i+1], b = d[i+2];
+        // If pixel is very light (white background), make transparent
+        if (r > 200 && g > 200 && b > 200) {
+          d[i+3] = 0;
+        } else {
+          // Remap dark strokes to sand/gold color #c9a96e
+          const brightness = (r + g + b) / 3;
+          const t = 1 - brightness / 255;
+          d[i]   = Math.round(201 * t); // R of #c9a96e
+          d[i+1] = Math.round(169 * t); // G
+          d[i+2] = Math.round(110 * t); // B
+          d[i+3] = Math.round(255 * t);
+        }
+      }
+      normCtx.putImageData(imgData, 0, 0);
+
+      const dataUrl = norm.toDataURL('image/png');
+      font[selectedLetter] = { type: 'draw', dataUrl };
+      buildFontGrid();
+      updateProgress();
+      renderTypeset();
+      toast(selectedLetter + ' drawing saved!');
+    };
+
+    function renderTypeset() {
+      const canvasBox = document.getElementById('renderCanvas');
+      const raw = (document.getElementById('tsInput').value || '').toUpperCase();
+      const tracking = parseInt(document.getElementById('tracking').value);
+      const leading = parseInt(document.getElementById('leading').value);
+      const size = parseInt(document.getElementById('glyphSize').value);
+
+      const assigned = useDefaultMapping ? 26 : Object.keys(font).filter(k => font[k]).length;
+      if (assigned === 0) {
+        canvasBox.innerHTML = '<div class="empty-canvas">Assign glyphs to letters<br>then go to Typeset tab</div>';
+        return;
+      }
+      if (!raw.trim()) {
+        canvasBox.innerHTML = '<div class="empty-canvas">Type text in Typeset tab</div>';
+        return;
+      }
+
+      const lines = raw.split('\n');
+      canvasBox.innerHTML = '';
+
+      const makeCell = (letter) => {
+        const g = getEffectiveGlyph(letter);
+        const wrap = document.createElement('div');
+        wrap.style.cssText = `width:${size}px;height:${size}px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;`;
+        wrap.title = letter;
+        if (!g) {
+          wrap.style.opacity = '0.3';
+          const sp = document.createElement('span');
+          sp.style.cssText = `font-size:${Math.round(size*0.4)}px;color:var(--color-text-secondary);font-family:var(--font-mono);`;
+          sp.textContent = letter;
+          wrap.appendChild(sp);
+        } else {
+          const c = makeGlyphElement(g, size);
+          wrap.appendChild(c);
+        }
+        return wrap;
+      };
+
+      if (tsDirection === 'ltr' || tsDirection === 'rtl') {
+        const outer = document.createElement('div');
+        outer.style.cssText = `display:flex;flex-direction:column;gap:${leading}px;align-items:${tsDirection==='rtl'?'flex-end':'flex-start'};width:100%;`;
+        lines.forEach(line => {
+          const chars = tsDirection === 'rtl' ? [...line].reverse() : [...line];
+          const row = document.createElement('div');
+          row.style.cssText = `display:flex;flex-direction:row;gap:${tracking}px;align-items:center;flex-wrap:wrap;`;
+          chars.forEach(ch => {
+            if (ch === ' ') {
+              const sp = document.createElement('div');
+              sp.style.width = Math.round(size*0.5)+'px';
+              row.appendChild(sp);
+              return;
+            }
+            if (!/[A-Z]/.test(ch)) return;
+            row.appendChild(makeCell(ch));
+          });
+          outer.appendChild(row);
+        });
+        canvasBox.appendChild(outer);
+      } else {
+        const outer = document.createElement('div');
+        outer.style.cssText = `display:flex;flex-direction:row;gap:${tracking+12}px;align-items:flex-start;`;
+        lines.forEach(line => {
+          const col = document.createElement('div');
+          col.style.cssText = `display:flex;flex-direction:column;gap:${Math.round(leading*0.3)}px;align-items:center;`;
+          [...line].forEach(ch => {
+            if (ch === ' ') {
+              const sp = document.createElement('div');
+              sp.style.height = Math.round(size*0.4)+'px';
+              col.appendChild(sp);
+              return;
+            }
+            if (!/[A-Z]/.test(ch)) return;
+            col.appendChild(makeCell(ch));
+          });
+          outer.appendChild(col);
+        });
+        canvasBox.appendChild(outer);
+      }
+    }
+
+    function fontToEncoded() {
+      const out = {};
+      LETTERS.forEach(l => {
+        if (!font[l]) return;
+        if (font[l].type === 'compose') out[l] = { t: 'c', g: font[l].glyphs };
+        else if (font[l].type === 'draw') out[l] = { t: 'd', u: font[l].dataUrl };
+      });
+      return btoa(unescape(encodeURIComponent(JSON.stringify(out))));
+    }
+
+    function encodedToFont(str) {
+      try {
+        const data = JSON.parse(decodeURIComponent(escape(atob(str))));
+        LETTERS.forEach(l => {
+          if (!data[l]) return;
+          if (data[l].t === 'c') font[l] = { type: 'compose', glyphs: data[l].g };
+          else if (data[l].t === 'd') font[l] = { type: 'draw', dataUrl: data[l].u };
+        });
+        return true;
+      } catch(e) {
+        return false;
+      }
+    }
+
+    function updateShareUrl() {
+      const n = Object.keys(font).filter(k => font[k]).length;
+      if (n === 0) {
+        document.getElementById('shareUrl').textContent = 'Assign glyphs to generate link.';
+        return;
+      }
+      const encoded = fontToEncoded();
+      const url = window.location.href.split('?')[0] + '?font=' + encoded;
+      document.getElementById('shareUrl').textContent = url;
+    }
+
+    document.getElementById('shareBtn').onclick = () => {
+      const n = Object.keys(font).filter(k => font[k]).length;
+      if (n === 0) {
+        toast('Assign at least one glyph first');
+        return;
+      }
+      navigator.clipboard.writeText(document.getElementById('shareUrl').textContent).then(() => toast('Link copied!'));
+    };
+
+    document.getElementById('copyLinkBtn').onclick = () => {
+      const url = document.getElementById('shareUrl').textContent;
+      if (!url.includes('?')) {
+        toast('No link yet');
+        return;
+      }
+      navigator.clipboard.writeText(url).then(() => toast('Copied!'));
+    };
+
+    document.getElementById('resetBtn').onclick = () => {
+      if (!confirm('Reset all glyph assignments?')) return;
+      font = {};
+      compositionSlots = [];
+      buildFontGrid();
+      updateProgress();
+      updateShareUrl();
+      renderTypeset();
+      clearDrawCanvas();
+    };
+
+    document.getElementById('loadUrlBtn').onclick = () => {
+      const input = prompt('Paste shared font URL or encoded string:');
+      if (!input) return;
+      const match = input.match(/[?&]font=([^&]+)/);
+      const encoded = match ? match[1] : input.trim();
+      if (encodedToFont(encoded)) {
+        buildFontGrid();
+        updateProgress();
+        updateShareUrl();
+        renderTypeset();
+        toast('Font loaded!');
+      } else {
+        toast('Invalid font data');
+      }
+    };
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        if (tab.dataset.tab === 'typeset') renderTypeset();
+      };
+    });
+
+    document.querySelectorAll('.mtab').forEach(btn => {
+      btn.onclick = () => {
+        currentMethod = btn.dataset.method;
+        document.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateEditorModeUI();
+        if (useDefaultMapping) return;
+        if (currentMethod === 'draw') restoreDrawing();
+        if (currentMethod === 'compose') {
+          compositionSlots = (font[selectedLetter] && font[selectedLetter].type === 'compose') ? [...font[selectedLetter].glyphs] : [];
+          renderSlots();
+          updateGardinerHighlights();
+          updateComposePreview();
+        }
+      };
+    });
+
+    document.querySelectorAll('.dir-btn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tsDirection = btn.dataset.dir;
+        renderTypeset();
+      };
+    });
+
+    ['tracking','leading','glyphSize'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', () => {
+        document.getElementById(id+'Val').textContent = el.value+'px';
+        renderTypeset();
+      });
+    });
+
+    document.getElementById('tsInput').addEventListener('input', renderTypeset);
+
+
+    const modeSwitch = document.getElementById('modeSwitch');
+    modeSwitch.onclick = () => {
+      useDefaultMapping = !useDefaultMapping;
+      buildFontGrid();
+      updateProgress();
+      updateEditor();
+      renderTypeset();
+      toast(useDefaultMapping ? 'Default Gardiner mapping enabled' : 'Custom mode enabled');
+    };
+
+    document.getElementById('clearGlyphBtn').onclick = () => {
+      font[selectedLetter] = null;
+      compositionSlots = [];
+      renderSlots();
+      updateGardinerHighlights();
+      updateComposePreview();
+      buildFontGrid();
+      updateProgress();
+      updateShareUrl();
+      renderTypeset();
+    };
+
+    const copyGlyphsBtn = document.getElementById('copyGlyphs');
+    if (copyGlyphsBtn) {
+      copyGlyphsBtn.onclick = () => {
+        const raw = (document.getElementById('tsInput').value || '').toUpperCase();
+        let output = '';
+        for (const ch of raw) {
+          if (ch === ' ') {
+            output += ' ';
+          } else if (getEffectiveGlyph(ch) && getEffectiveGlyph(ch).type === 'compose') {
+            output += getEffectiveGlyph(ch).glyphs.join('');
+          } else if (/[A-Z]/.test(ch)) {
+            output += ch;
+          } else if (ch === '\n') {
+            output += '\n';
+          }
+        }
+        navigator.clipboard.writeText(output).then(() => toast('Glyph text copied!'));
+      };
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('font')) encodedToFont(urlParams.get('font'));
+
+    buildGardinerGrid();
+    buildFontGrid();
+    initDrawCanvas();
+    updateProgress();
+    updateEditor();
+    updateShareUrl();
+    renderTypeset();
+  </script>
+</body>
+</html>
